@@ -1,16 +1,1487 @@
 <!DOCTYPE html>
-<html lang="ms">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SiPPD — FAST PPD</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Attendance Report System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:   #0D2137;
+  --blue:   #1A5F9C;
+  --sky:    #2E8BC0;
+  --teal:   #0E9D8A;
+  --green:  #1DB87A;
+  --amber:  #F0A500;
+  --red:    #E63946;
+  --bg:     #F0F4F8;
+  --surf:   #FFFFFF;
+  --bdr:    #D4DCE6;
+  --text:   #1A2A3A;
+  --muted:  #6B7E92;
+  --lite:   #EBF2FA;
+  --sh:     0 2px 12px rgba(13,33,55,.10);
+  --sh-lg:  0 8px 32px rgba(13,33,55,.16);
+  --r:      12px;
+  --rs:     8px;
+  --font:   'DM Sans', sans-serif;
+  --mono:   'DM Mono', monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+/* ── SCREENS ── */
+.screen{display:none;min-height:100vh}
+.screen.active{display:flex;flex-direction:column}
+
+/* ══════════════════ LOGIN ══════════════════ */
+#screen-login{
+  background:linear-gradient(150deg,#0D2137 0%,#0a3055 50%,#0d4a6b 100%);
+  align-items:center;justify-content:center;padding:24px 20px;
+}
+.login-wrap{width:100%;max-width:380px}
+.login-logo{
+  width:68px;height:68px;border-radius:18px;margin:0 auto 20px;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+  display:flex;align-items:center;justify-content:center;font-size:30px;
+  box-shadow:0 8px 32px rgba(0,0,0,.3);
+}
+.login-box{
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);
+  border-radius:20px;backdrop-filter:blur(20px);padding:32px 28px;
+  box-shadow:0 24px 64px rgba(0,0,0,.35);
+}
+.login-box h1{font-family:'Playfair Display',serif;font-size:21px;color:#fff;text-align:center;margin-bottom:3px}
+.login-box .sub{color:rgba(255,255,255,.4);font-size:12px;text-align:center;margin-bottom:26px}
+.l-label{display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+.l-input{
+  width:100%;padding:11px 16px;background:rgba(255,255,255,.08);
+  border:1.5px solid rgba(255,255,255,.16);border-radius:10px;
+  color:#fff;font-family:var(--font);font-size:15px;margin-bottom:14px;
+  transition:border-color .2s,background .2s;-webkit-appearance:none;
+}
+.l-input::placeholder{color:rgba(255,255,255,.28)}
+.l-input:focus{outline:none;border-color:var(--sky);background:rgba(255,255,255,.12)}
+.l-input.err{border-color:#ff6b7a}
+.pw-wrap{position:relative}
+.pw-wrap .l-input{padding-right:44px;margin-bottom:18px}
+.pw-eye{position:absolute;right:12px;top:13px;background:none;border:none;cursor:pointer;color:rgba(255,255,255,.35);padding:2px;transition:color .2s}
+.pw-eye:hover{color:rgba(255,255,255,.75)}
+.l-btn{
+  width:100%;padding:13px;background:var(--sky);color:#fff;border:none;
+  border-radius:10px;font-family:var(--font);font-size:15px;font-weight:700;
+  cursor:pointer;transition:all .2s;letter-spacing:.02em;
+}
+.l-btn:hover{background:#3ba0d8;transform:translateY(-1px);box-shadow:0 6px 20px rgba(46,139,192,.4)}
+.l-err{background:rgba(230,57,70,.15);border:1px solid rgba(230,57,70,.3);color:#ffaab0;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none}
+.l-footer{color:rgba(255,255,255,.22);font-size:11px;text-align:center;margin-top:18px}
+
+/* ══════════════════ TOP NAV ══════════════════ */
+.topnav{
+  background:var(--navy);color:#fff;padding:0 16px;height:56px;
+  display:flex;align-items:center;gap:10px;
+  position:sticky;top:0;z-index:100;flex-shrink:0;
+}
+.nav-back{background:none;border:none;color:rgba(255,255,255,.65);cursor:pointer;padding:8px;margin:-8px;border-radius:50%;display:flex;align-items:center;transition:all .2s}
+.nav-back:hover{color:#fff;background:rgba(255,255,255,.1)}
+.nav-title{font-size:15px;font-weight:600;flex:1}
+.nav-sub{font-size:11px;color:rgba(255,255,255,.5);font-family:var(--mono)}
+.nav-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.03em}
+.b-teacher{background:rgba(29,184,122,.2);color:#1DB87A}
+.b-officer{background:rgba(46,139,192,.2);color:#6EC6F0}
+.b-admin{background:rgba(240,165,0,.2);color:#F0A500}
+.nav-out{background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font);padding:6px 10px;border-radius:6px;transition:all .2s}
+.nav-out:hover{color:#fff;background:rgba(255,255,255,.1)}
+
+/* ══════════════════ BOTTOM NAV ══════════════════ */
+.bnav{background:var(--surf);border-top:1px solid var(--bdr);display:flex;position:sticky;bottom:0;z-index:100;flex-shrink:0}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;border:none;background:none;cursor:pointer;color:var(--muted);font-size:10px;font-weight:600;font-family:var(--font);gap:3px;transition:color .2s}
+.bnav-item svg{width:22px;height:22px}
+.bnav-item.active{color:var(--blue)}
+
+/* ══════════════════ CONTENT / CARDS ══════════════════ */
+.content{flex:1;overflow-y:auto;padding:16px}
+.card{background:var(--surf);border-radius:var(--r);border:1px solid var(--bdr);box-shadow:var(--sh);margin-bottom:12px;overflow:hidden}
+.card-hd{padding:13px 16px 10px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px}
+.card-hd h3{font-size:14px;font-weight:700;color:var(--navy);flex:1}
+.card-body{padding:16px}
+.c-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* ══════════════════ FORMS ══════════════════ */
+.fg{margin-bottom:14px}
+.flabel{display:block;font-size:11px;font-weight:700;color:var(--navy);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+.flabel span{color:var(--red);margin-left:2px}
+.fc{width:100%;padding:11px 14px;border:1.5px solid var(--bdr);border-radius:var(--rs);font-family:var(--font);font-size:15px;color:var(--text);background:var(--surf);transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;appearance:none}
+.fc:focus{outline:none;border-color:var(--sky);box-shadow:0 0 0 3px rgba(46,139,192,.12)}
+.fc.err{border-color:var(--red)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fhint{font-size:11px;color:var(--muted);margin-top:4px}
+.auto-f{background:var(--lite);border:1.5px solid var(--bdr);border-radius:var(--rs);padding:11px 14px;font-size:15px;font-weight:700;color:var(--navy);font-family:var(--mono)}
+
+/* ══════════════════ BUTTONS ══════════════════ */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 18px;border-radius:var(--rs);font-family:var(--font);font-size:14px;font-weight:700;border:none;cursor:pointer;transition:all .2s;letter-spacing:.01em}
+.btn-p{background:var(--blue);color:#fff}.btn-p:hover{background:var(--navy)}
+.btn-s{background:var(--lite);color:var(--blue);border:1.5px solid var(--bdr)}.btn-s:hover{background:var(--bdr)}
+.btn-g{background:var(--green);color:#fff}.btn-g:hover{background:var(--teal)}
+.btn-d{background:#fee;color:var(--red);border:1.5px solid #fcc}.btn-d:hover{background:var(--red);color:#fff}
+.btn-a{background:rgba(240,165,0,.15);color:#8a5d00;border:1.5px solid rgba(240,165,0,.3)}.btn-a:hover{background:var(--amber);color:#fff}
+.btn-full{width:100%}
+.btn-sm{padding:7px 12px;font-size:12px;border-radius:6px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* ══════════════════ STATS ══════════════════ */
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.scard{background:var(--surf);border-radius:var(--r);border:1px solid var(--bdr);padding:14px;box-shadow:var(--sh)}
+.scard.accent{background:var(--navy);border-color:var(--navy)}
+.slabel{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.accent .slabel{color:rgba(255,255,255,.45)}
+.sval{font-size:26px;font-weight:700;color:var(--navy);font-family:var(--mono);line-height:1.1}
+.accent .sval{color:#fff}
+.ssub{font-size:11px;color:var(--muted);margin-top:2px}
+.accent .ssub{color:rgba(255,255,255,.45)}
+
+/* ══════════════════ RATE BADGE ══════════════════ */
+.rb{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:12px;font-weight:700;font-family:var(--mono)}
+.rb-hi{background:rgba(29,184,122,.12);color:var(--green)}
+.rb-md{background:rgba(240,165,0,.12);color:var(--amber)}
+.rb-lo{background:rgba(230,57,70,.12);color:var(--red)}
+
+/* ══════════════════ TABLE ══════════════════ */
+.dtable{width:100%;border-collapse:collapse;font-size:13px}
+.dtable th{background:var(--navy);color:rgba(255,255,255,.85);padding:9px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.dtable td{padding:10px 12px;border-bottom:1px solid var(--bdr);vertical-align:middle}
+.dtable tr:last-child td{border-bottom:none}
+.dtable tr:hover td{background:var(--lite)}
+.mono{font-family:var(--mono);font-size:13px}
+
+/* ══════════════════ ALERTS ══════════════════ */
+.alert{padding:12px 16px;border-radius:var(--rs);font-size:13px;margin-bottom:12px;display:flex;gap:9px;align-items:flex-start}
+.al-ok{background:rgba(29,184,122,.1);border:1px solid rgba(29,184,122,.3);color:#0b7a55}
+.al-err{background:rgba(230,57,70,.1);border:1px solid rgba(230,57,70,.3);color:#b22030}
+.al-info{background:rgba(26,95,156,.1);border:1px solid rgba(26,95,156,.2);color:var(--blue)}
+.al-warn{background:rgba(240,165,0,.1);border:1px solid rgba(240,165,0,.3);color:#a36f00}
+
+/* ══════════════════ SECTION TITLE ══════════════════ */
+.sec-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:18px 0 10px;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--bdr)}
+
+/* ══════════════════ LANDING ══════════════════ */
+.landing{min-height:100vh;background:linear-gradient(150deg,var(--navy) 0%,#103050 55%,#0d4a6b 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px;text-align:center}
+.land-logo{width:72px;height:72px;border-radius:20px;background:rgba(255,255,255,.1);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;margin:0 auto 22px;font-size:32px}
+.landing h1{font-family:'Playfair Display',serif;font-size:26px;color:#fff;line-height:1.2;margin-bottom:6px}
+.landing .sub{color:rgba(255,255,255,.45);font-size:13px;margin-bottom:36px}
+.role-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:380px;margin-bottom:20px}
+.role-card{background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.14);border-radius:var(--r);padding:20px 12px;cursor:pointer;transition:all .25s;text-align:center;color:#fff}
+.role-card:hover{background:rgba(255,255,255,.17);border-color:rgba(255,255,255,.38);transform:translateY(-2px)}
+.rc-icon{font-size:28px;margin-bottom:10px}
+.role-card h3{font-size:14px;font-weight:700;margin-bottom:4px}
+.role-card p{font-size:11px;color:rgba(255,255,255,.45);line-height:1.4}
+
+/* ══════════════════ CLASS SETUP ROWS ══════════════════ */
+.cs-row{display:grid;grid-template-columns:1fr 90px 34px;gap:8px;align-items:center;margin-bottom:8px;background:var(--lite);border-radius:var(--rs);padding:8px 10px}
+.cs-row input{width:100%;padding:8px 10px;border:1.5px solid var(--bdr);border-radius:6px;font-family:var(--font);font-size:13px;background:var(--surf)}
+.cs-row input:focus{outline:none;border-color:var(--sky)}
+.cs-del{background:none;border:none;cursor:pointer;color:var(--muted);padding:5px;border-radius:5px;display:flex;align-items:center;transition:all .2s}
+.cs-del:hover{color:var(--red);background:#fee}
+.cs-hdr{display:grid;grid-template-columns:1fr 90px 34px;gap:8px;padding:0 10px;margin-bottom:6px}
+.cs-hdr span{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+
+/* ══════════════════ ATTENDANCE INPUT ROWS ══════════════════ */
+.att-row{
+  display:grid;grid-template-columns:1fr 80px 80px 70px;
+  gap:8px;align-items:center;
+  padding:10px 14px;border-bottom:1px solid var(--bdr);
+}
+.att-row:last-child{border-bottom:none}
+.att-row:hover{background:var(--lite)}
+.att-classname{font-size:14px;font-weight:600;color:var(--navy)}
+.att-enrolled{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.att-input{
+  width:100%;padding:8px 10px;border:1.5px solid var(--bdr);border-radius:6px;
+  font-family:var(--mono);font-size:14px;font-weight:600;text-align:center;
+  background:var(--surf);transition:border-color .2s,background .2s;
+}
+.att-input:focus{outline:none;border-color:var(--sky);background:#f0f8ff}
+.att-input.over{border-color:var(--red);background:#fff0f1}
+.att-rate{font-size:13px;font-weight:700;font-family:var(--mono);text-align:center}
+.att-hdr{display:grid;grid-template-columns:1fr 80px 80px 70px;gap:8px;padding:8px 14px;background:var(--navy)}
+.att-hdr span{font-size:10px;font-weight:700;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.06em}
+
+/* ══════════════════ PILL ══════════════════ */
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.pill-g{background:rgba(29,184,122,.12);color:var(--teal)}
+.pill-b{background:rgba(26,95,156,.12);color:var(--blue)}
+.pill-a{background:rgba(240,165,0,.12);color:#8a5d00}
+
+/* ══════════════════ ADMIN USER LIST ══════════════════ */
+.u-row{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--bdr)}
+.u-row:last-child{border-bottom:none}
+.u-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.av-t{background:rgba(29,184,122,.15);color:var(--teal)}
+.av-o{background:rgba(46,139,192,.15);color:var(--sky)}
+.av-a{background:rgba(240,165,0,.15);color:#8a5d00}
+.u-info{flex:1;min-width:0}
+.u-name{font-weight:700;font-size:14px;color:var(--navy)}
+.u-meta{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.u-acts{display:flex;gap:6px;flex-shrink:0}
+
+/* ══════════════════ MODAL ══════════════════ */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-ov.open{display:flex}
+.modal{background:var(--surf);border-radius:var(--r);box-shadow:var(--sh-lg);width:100%;max-width:400px;animation:slideUp .22s ease}
+.modal-hd{padding:16px 20px 12px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
+.modal-hd h3{font-size:15px;font-weight:700;color:var(--navy)}
+.modal-x{background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;border-radius:4px;transition:color .2s;display:flex}
+.modal-x:hover{color:var(--text)}
+.modal-body{padding:20px}
+.modal-ft{padding:12px 20px 16px;display:flex;gap:10px;justify-content:flex-end}
+
+/* ══════════════════ EMPTY STATE ══════════════════ */
+.empty{text-align:center;padding:44px 24px;color:var(--muted)}
+.empty-icon{font-size:40px;margin-bottom:12px}
+.empty h3{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:6px}
+.empty p{font-size:13px}
+
+/* ══════════════════ PRINT ══════════════════ */
+@media print{
+  body *{visibility:hidden}
+  #print-area,#print-area *{visibility:visible}
+  #print-area{position:fixed;top:0;left:0;width:100%;z-index:99999;background:#fff}
+}
+#print-area{display:none}
+.rpt{font-family:'DM Sans',sans-serif;padding:32px;max-width:860px;margin:0 auto;background:#fff}
+.rpt-hd{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--navy);padding-bottom:14px;margin-bottom:20px}
+.rpt-hd h1{font-family:'Playfair Display',serif;font-size:20px;color:var(--navy)}
+.rpt-hd p{font-size:12px;color:var(--muted);margin-top:2px}
+.rpt-meta{text-align:right;font-size:12px;color:var(--muted)}
+.rpt-meta strong{display:block;font-size:18px;color:var(--navy);font-family:var(--mono)}
+.rpt-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.rpt-stat{border:1px solid var(--bdr);border-radius:8px;padding:10px;text-align:center}
+.rpt-stat .v{font-size:22px;font-weight:700;color:var(--navy);font-family:var(--mono)}
+.rpt-stat .l{font-size:11px;color:var(--muted)}
+.rpt-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px}
+.rpt-table th{background:var(--navy);color:#fff;padding:8px 10px;text-align:left}
+.rpt-table td{padding:8px 10px;border-bottom:1px solid var(--bdr)}
+.rpt-table tr:nth-child(even) td{background:var(--lite)}
+.rpt-foot{text-align:center;font-size:11px;color:var(--muted);border-top:1px solid var(--bdr);padding-top:10px;margin-top:16px}
+
+/* ══════════════════ ANIMATIONS ══════════════════ */
+@keyframes slideUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.ai{animation:slideUp .3s ease both}
+.ai:nth-child(2){animation-delay:.05s}
+.ai:nth-child(3){animation-delay:.10s}
+.ai:nth-child(4){animation-delay:.15s}
+
+/* ══════════════════ TOAST ══════════════════ */
+#toast{position:fixed;bottom:76px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--navy);color:#fff;padding:9px 20px;border-radius:24px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;box-shadow:var(--sh-lg)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ══════════════════ SYNC STATUS ══════════════════ */
+.sync-bar{display:flex;align-items:center;gap:8px;padding:8px 16px;font-size:12px;font-weight:600;border-bottom:1px solid var(--bdr)}
+.sync-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sync-ok .sync-dot{background:var(--green)}
+.sync-pending .sync-dot{background:var(--amber);animation:pulse .8s infinite alternate}
+.sync-err .sync-dot{background:var(--red)}
+@keyframes pulse{to{opacity:.3}}
+
+@media(max-width:400px){
+  .sgrid,.frow{grid-template-columns:1fr}
+  .role-cards{grid-template-columns:1fr}
+  .att-row{grid-template-columns:1fr 70px 70px 60px}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ LOGIN ═══════════════ -->
+<div id="screen-login" class="screen active">
+  <div class="login-wrap ai">
+    <div class="login-logo">📊</div>
+    <div class="login-box">
+      <h1>Smart Attendance<br>Report System</h1>
+      <p class="sub">Sistem Laporan Kehadiran Pintar</p>
+      <div id="l-err" class="l-err"></div>
+      <label class="l-label" for="l-user">Username</label>
+      <input type="text" class="l-input" id="l-user" placeholder="Enter username" autocomplete="username" autocapitalize="none">
+      <label class="l-label" for="l-pass">Password</label>
+      <div class="pw-wrap">
+        <input type="password" class="l-input" id="l-pass" placeholder="Enter password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="pw-eye" onclick="togglePw()" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <button class="l-btn" onclick="doLogin()">Sign In →</button>
+    </div>
+    <p class="l-footer">v2.0 · Data synced to Supabase</p>
+  </div>
+</div>
+
+<!-- ═══════════════ LANDING ═══════════════ -->
+<div id="screen-landing" class="screen">
+  <div class="landing">
+    <div class="land-logo">📊</div>
+    <h1>Smart Attendance<br>Report System</h1>
+    <p class="sub" id="land-greet">Welcome</p>
+    <div class="role-cards" id="land-cards"></div>
+    <button onclick="logout()" style="background:none;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.45);padding:8px 20px;border-radius:20px;cursor:pointer;font-family:var(--font);font-size:12px;font-weight:600;transition:all .2s" onmouseover="this.style.color='#fff';this.style.borderColor='rgba(255,255,255,.5)'" onmouseout="this.style.color='rgba(255,255,255,.45)';this.style.borderColor='rgba(255,255,255,.2)'">Sign Out</button>
+  </div>
+</div>
+
+<!-- ═══════════════ TEACHER SCREEN ═══════════════ -->
+<div id="screen-teacher" class="screen">
+  <div class="topnav">
+    <button class="nav-back" onclick="goHome()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+    <div style="flex:1">
+      <div class="nav-title" id="t-school-title">Teacher Portal</div>
+      <div class="nav-sub" id="t-school-sub">—</div>
+    </div>
+    <span class="nav-badge b-teacher">TEACHER</span>
+    <button class="nav-out" onclick="logout()">Sign Out</button>
+  </div>
+
+  <div class="bnav">
+    <button class="bnav-item active" id="tb-att" onclick="tTab('att')">
+      <svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 002 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg>
+      Attendance
+    </button>
+    <button class="bnav-item" id="tb-setup" onclick="tTab('setup')">
+      <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7 7 0 00-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54a7.36 7.36 0 00-1.62.94l-2.39-.96a.48.48 0 00-.59.22L2.74 8.87a.47.47 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.47.47 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54a7.36 7.36 0 001.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 00-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+      Setup
+    </button>
+    <button class="bnav-item" id="tb-hist" onclick="tTab('hist')">
+      <svg viewBox="0 0 24 24"><path fill="currentColor" d="M13 3a9 9 0 00-9 9H1l3.89 3.89.07.14L9 12H6a6 6 0 116 6c-1.66 0-3.14-.69-4.22-1.78L6.34 17.66A7.97 7.97 0 0013 20a9 9 0 000-18zm-1 5v5l4.28 2.54.72-1.21L13 12.5V8h-1z"/></svg>
+      History
+    </button>
+  </div>
+
+  <!-- TAB: ATTENDANCE -->
+  <div id="tc-att" class="content">
+    <!-- Date picker + sync bar -->
+    <div class="card ai">
+      <div class="card-body" style="padding:12px 16px">
+        <div class="fg" style="margin-bottom:0">
+          <label class="flabel">Date <span>*</span></label>
+          <input type="date" class="fc" id="t-date" onchange="loadAttendanceForm()">
+        </div>
+      </div>
+    </div>
+
+    <!-- No setup warning -->
+    <div id="t-nosetup" class="alert al-warn ai" style="display:none">
+      ⚠️ No class setup found. Go to the <strong>Setup</strong> tab to configure your school's classrooms first.
+    </div>
+
+    <!-- Attendance input card -->
+    <div class="card ai" id="t-att-card" style="display:none">
+      <div class="card-hd">
+        <div class="c-icon" style="background:#e8f8f2">👩‍🎓</div>
+        <h3>Daily Attendance</h3>
+        <div id="t-att-badge" style="margin-left:auto"></div>
+      </div>
+      <!-- header row -->
+      <div class="att-hdr">
+        <span>Classroom</span>
+        <span style="text-align:center">Enrolled</span>
+        <span style="text-align:center">Present</span>
+        <span style="text-align:center">Rate</span>
+      </div>
+      <div id="t-att-rows"></div>
+      <!-- totals footer -->
+      <div style="padding:12px 16px;background:var(--lite);border-top:2px solid var(--bdr);display:grid;grid-template-columns:1fr 80px 80px 70px;gap:8px;align-items:center">
+        <span style="font-size:13px;font-weight:700;color:var(--navy)">TOTAL</span>
+        <span style="font-size:14px;font-weight:700;font-family:var(--mono);text-align:center" id="t-tot-enrolled">—</span>
+        <span style="font-size:14px;font-weight:700;font-family:var(--mono);text-align:center;color:var(--green)" id="t-tot-present">—</span>
+        <span style="font-size:14px;font-weight:700;font-family:var(--mono);text-align:center" id="t-tot-rate">—</span>
+      </div>
+    </div>
+
+    <div id="t-att-err" class="alert al-err" style="display:none"></div>
+
+    <div id="t-att-actions" style="display:none;margin-bottom:80px">
+      <button class="btn btn-g btn-full" id="t-save-btn" onclick="saveAttendance()">
+        ✓ Save &amp; Send to Dashboard
+      </button>
+      <div id="t-sync-status" style="text-align:center;font-size:12px;color:var(--muted);margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- TAB: SETUP -->
+  <div id="tc-setup" class="content" style="display:none">
+    <div class="alert al-info ai">
+      <span>ℹ️</span>
+      <span>Set your school's classrooms and enrollment numbers here. These become your defaults for all attendance submissions.</span>
+    </div>
+
+    <div class="card ai">
+      <div class="card-hd">
+        <div class="c-icon" style="background:#EBF2FA">🏫</div>
+        <h3>School Info</h3>
+      </div>
+      <div class="card-body">
+        <div class="fg">
+          <label class="flabel">School Name</label>
+          <div class="auto-f" id="setup-school-name" style="font-size:14px;font-weight:600">—</div>
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label class="flabel">School Code</label>
+          <div class="auto-f" id="setup-school-code" style="font-size:13px">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card ai">
+      <div class="card-hd">
+        <div class="c-icon" style="background:#EDE8FF">📚</div>
+        <h3>Classrooms</h3>
+        <button class="btn btn-s btn-sm" onclick="addSetupRow()" style="margin-left:auto">+ Add Class</button>
+      </div>
+      <div class="card-body" style="padding-top:12px">
+        <div class="cs-hdr">
+          <span>Class Name</span><span>Enrollment</span><span></span>
+        </div>
+        <div id="setup-rows"></div>
+      </div>
+    </div>
+
+    <div id="setup-err" class="alert al-err" style="display:none"></div>
+    <button class="btn btn-p btn-full ai" onclick="saveSetup()" style="margin-bottom:80px">💾 Save as Default Setup</button>
+  </div>
+
+  <!-- TAB: HISTORY -->
+  <div id="tc-hist" class="content" style="display:none">
+    <div class="sec-title">Submission History</div>
+    <div id="t-hist-list"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ OFFICER SCREEN ═══════════════ -->
+<div id="screen-officer" class="screen">
+  <div class="topnav">
+    <button class="nav-back" onclick="goHome()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+    <div style="flex:1">
+      <div class="nav-title">District Dashboard</div>
+      <div class="nav-sub" id="off-datelabel">—</div>
+    </div>
+    <span class="nav-badge b-officer">OFFICER</span>
+    <button class="nav-out" onclick="logout()">Sign Out</button>
+  </div>
+
+  <div class="content" style="padding-bottom:24px">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
+      <input type="date" class="fc" id="off-date" onchange="loadDashboard()" style="flex:1">
+      <button class="btn btn-s btn-sm" onclick="exportJSON()">⬇ Export</button>
+      <button class="btn btn-p btn-sm" onclick="printReport()">🖨 Print</button>
+    </div>
+
+    <div class="sgrid ai">
+      <div class="scard accent">
+        <div class="slabel">District Rate</div>
+        <div class="sval" id="off-rate">—</div>
+        <div class="ssub">Student attendance</div>
+      </div>
+      <div class="scard">
+        <div class="slabel">Total Present</div>
+        <div class="sval" id="off-present">—</div>
+        <div class="ssub">of <span id="off-enrolled">—</span> enrolled</div>
+      </div>
+      <div class="scard">
+        <div class="slabel">Schools Submitted</div>
+        <div class="sval" id="off-submitted">—</div>
+        <div class="ssub">of <span id="off-total-schools">—</span> schools</div>
+      </div>
+      <div class="scard">
+        <div class="slabel">Missing Reports</div>
+        <div class="sval" id="off-missing" style="color:var(--red)">—</div>
+        <div class="ssub">pending</div>
+      </div>
+    </div>
+
+    <div id="off-missing-alert" class="alert al-warn" style="display:none">
+      <span>⚠️</span>
+      <div><strong>Not yet submitted:</strong><div id="off-missing-list" style="font-size:12px;margin-top:4px"></div></div>
+    </div>
+
+    <div class="sec-title">School Submissions</div>
+    <div id="off-empty" class="empty" style="display:none">
+      <div class="empty-icon">📭</div>
+      <h3>No submissions yet</h3>
+      <p>No schools have submitted for this date.</p>
+    </div>
+
+    <div class="card" id="off-table-card" style="display:none">
+      <div style="overflow-x:auto">
+        <table class="dtable">
+          <thead><tr><th>School</th><th>Present</th><th>Enrolled</th><th>Rate</th><th>Submitted</th><th></th></tr></thead>
+          <tbody id="off-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Drilldown -->
+    <div class="card" id="off-drill" style="display:none;margin-top:12px">
+      <div class="card-hd">
+        <div class="c-icon" style="background:#EBF2FA">📚</div>
+        <h3 id="drill-title">Classrooms</h3>
+        <button class="btn btn-s btn-sm" style="margin-left:auto" onclick="closeDrill()">✕</button>
+      </div>
+      <div class="att-hdr">
+        <span>Classroom</span><span style="text-align:center">Enrolled</span><span style="text-align:center">Present</span><span style="text-align:center">Rate</span>
+      </div>
+      <div id="drill-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ ADMIN SCREEN ═══════════════ -->
+<div id="screen-admin" class="screen">
+  <div class="topnav">
+    <button class="nav-back" onclick="goHome()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+    <div style="flex:1">
+      <div class="nav-title">Admin Panel</div>
+      <div class="nav-sub">System Management</div>
+    </div>
+    <span class="nav-badge b-admin">ADMIN</span>
+    <button class="nav-out" onclick="logout()">Sign Out</button>
+  </div>
+
+  <div class="bnav">
+    <button class="bnav-item active" id="ab-users" onclick="aTab('users')">
+      <svg viewBox="0 0 24 24"><path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+      Users
+    </button>
+    <button class="bnav-item" id="ab-schools" onclick="aTab('schools')">
+      <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3L1 9l4 2.18V17h2v-4.82l1 .55V17c0 1.1 1.79 2 4 2s4-.9 4-2v-4.27l3-1.64V17h2V9L12 3zm4 12.18c-.2.42-1.63 1.32-4 1.32s-3.8-.9-4-1.32v-2.9L12 14l4-1.72v2.9z"/></svg>
+      Schools
+    </button>
+    <button class="bnav-item" id="ab-supa" onclick="aTab('supa')">
+      <svg viewBox="0 0 24 24"><path fill="currentColor" d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.237 4.237 0 00-6 0zm-4-4l2 2a7.074 7.074 0 0110 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+      Supabase
+    </button>
+  </div>
+
+  <!-- TAB: USERS -->
+  <div id="ac-users" class="content">
+    <div class="sgrid ai">
+      <div class="scard"><div class="slabel">Total Users</div><div class="sval" id="adm-total">—</div></div>
+      <div class="scard accent"><div class="slabel">Roles</div><div class="sval" id="adm-roles">—</div></div>
+    </div>
+
+    <div class="card ai">
+      <div class="card-hd"><div class="c-icon" style="background:#e8f8f2">➕</div><h3>Add User</h3></div>
+      <div class="card-body">
+        <div class="frow">
+          <div class="fg"><label class="flabel">Username <span>*</span></label><input type="text" class="fc" id="au-user" placeholder="e.g. teacher01" autocapitalize="none"></div>
+          <div class="fg">
+            <label class="flabel">Role <span>*</span></label>
+            <select class="fc" id="au-role">
+              <option value="teacher">🏫 Teacher</option>
+              <option value="officer">📋 Officer</option>
+              <option value="admin">🔑 Admin</option>
+            </select>
+          </div>
+        </div>
+        <div class="frow">
+          <div class="fg"><label class="flabel">Password <span>*</span></label><input type="password" class="fc" id="au-pass" placeholder="Min 4 chars"></div>
+          <div class="fg"><label class="flabel">Display Name</label><input type="text" class="fc" id="au-display" placeholder="e.g. Cikgu Ahmad"></div>
+        </div>
+        <div class="fg">
+          <label class="flabel">School (for Teacher)</label>
+          <select class="fc" id="au-school">
+            <option value="">— Not applicable —</option>
+          </select>
+          <div class="fhint">Assign a school if role is Teacher. One teacher per school.</div>
+        </div>
+        <div id="au-err" class="alert al-err" style="display:none"></div>
+        <button class="btn btn-g btn-full" onclick="addUser()">➕ Create Account</button>
+      </div>
+    </div>
+
+    <div class="sec-title">All Users</div>
+    <div class="card ai"><div id="adm-ulist"></div></div>
+  </div>
+
+  <!-- TAB: SCHOOLS -->
+  <div id="ac-schools" class="content" style="display:none">
+    <div class="card ai">
+      <div class="card-hd"><div class="c-icon" style="background:#EBF2FA">➕</div><h3>Add School</h3></div>
+      <div class="card-body">
+        <div class="frow">
+          <div class="fg"><label class="flabel">School Code <span>*</span></label><input type="text" class="fc" id="sc-code" placeholder="e.g. SKA016" autocapitalize="characters"></div>
+          <div class="fg"><label class="flabel">School Name <span>*</span></label><input type="text" class="fc" id="sc-name" placeholder="e.g. SK Penampang"></div>
+        </div>
+        <div id="sc-err" class="alert al-err" style="display:none"></div>
+        <button class="btn btn-p btn-full" onclick="addSchool()">➕ Add School</button>
+      </div>
+    </div>
+    <div class="sec-title">All Schools</div>
+    <div class="card ai"><div id="adm-slist"></div></div>
+  </div>
+
+  <!-- TAB: SUPABASE CONFIG -->
+  <div id="ac-supa" class="content" style="display:none">
+    <div class="alert al-info ai">
+      <span>🔌</span>
+      <div>
+        <strong>Supabase Integration</strong><br>
+        Enter your Supabase project URL and anon key. These are saved locally and used when teachers submit attendance.
+      </div>
+    </div>
+
+    <div class="card ai">
+      <div class="card-hd"><div class="c-icon" style="background:#e8f8f2">⚙️</div><h3>Connection Settings</h3></div>
+      <div class="card-body">
+        <div class="fg">
+          <label class="flabel">Supabase Project URL <span>*</span></label>
+          <input type="url" class="fc" id="sb-url" placeholder="https://xxxxxxxxxxx.supabase.co">
+          <div class="fhint">Found in your Supabase project Settings → API</div>
+        </div>
+        <div class="fg">
+          <label class="flabel">Anon / Public Key <span>*</span></label>
+          <input type="text" class="fc" id="sb-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+          <div class="fhint">Use the anon key (safe for frontend use)</div>
+        </div>
+        <div class="fg">
+          <label class="flabel">Attendance Table Name</label>
+          <input type="text" class="fc" id="sb-table" placeholder="attendance" value="attendance">
+          <div class="fhint">The Supabase table where records will be inserted</div>
+        </div>
+        <div id="sb-err" class="alert al-err" style="display:none"></div>
+        <div id="sb-ok" class="alert al-ok" style="display:none">✅ Supabase config saved successfully.</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-p" onclick="saveSupaConfig()" style="flex:1">💾 Save Config</button>
+          <button class="btn btn-s" onclick="testSupabase()">🔌 Test Connection</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card ai">
+      <div class="card-hd"><div class="c-icon" style="background:#FFF4E0">📋</div><h3>Required Table Schema</h3></div>
+      <div class="card-body">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Create this table in your Supabase SQL editor:</p>
+        <pre style="background:var(--navy);color:#a8d8ea;padding:16px;border-radius:8px;font-size:12px;font-family:var(--mono);overflow-x:auto;line-height:1.6">create table attendance (
+  id          uuid primary key default gen_random_uuid(),
+  school_code text not null,
+  school_name text not null,
+  date        date not null,
+  submitted_by text,
+  submitted_at timestamptz default now(),
+  total_enrolled int,
+  total_present  int,
+  total_absent   int,
+  attendance_rate numeric(5,2),
+  classrooms  jsonb,
+  unique(school_code, date)
+);</pre>
+      </div>
+    </div>
+
+    <div class="card ai" style="border-color:#fcc">
+      <div class="card-hd"><div class="c-icon" style="background:#fee">🗑</div><h3>Danger Zone</h3></div>
+      <div class="card-body">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Clears all local attendance cache. Does not affect Supabase data.</p>
+        <button class="btn btn-d" onclick="clearCache()">🗑 Clear Local Cache</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ EDIT USER MODAL ═══════════════ -->
+<div class="modal-ov" id="modal-edit">
+  <div class="modal">
+    <div class="modal-hd">
+      <h3>✏️ Edit User</h3>
+      <button class="modal-x" onclick="closeModal('modal-edit')"><svg width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="eu-orig">
+      <div class="fg"><label class="flabel">Username</label><input type="text" class="fc" id="eu-user" autocapitalize="none"></div>
+      <div class="fg"><label class="flabel">Display Name</label><input type="text" class="fc" id="eu-display"></div>
+      <div class="fg">
+        <label class="flabel">Role</label>
+        <select class="fc" id="eu-role">
+          <option value="teacher">🏫 Teacher</option>
+          <option value="officer">📋 Officer</option>
+          <option value="admin">🔑 Admin</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="flabel">School (Teacher only)</label>
+        <select class="fc" id="eu-school"><option value="">— Not applicable —</option></select>
+      </div>
+      <div class="fg"><label class="flabel">New Password <span style="color:var(--muted);font-weight:400;text-transform:none">(blank = keep)</span></label><input type="password" class="fc" id="eu-pass" placeholder="Leave blank to keep"></div>
+      <div id="eu-err" class="alert al-err" style="display:none"></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-s" onclick="closeModal('modal-edit')">Cancel</button>
+      <button class="btn btn-p" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ PRINT ═══════════════ -->
+<div id="print-area">
+  <div class="rpt">
+    <div class="rpt-hd">
+      <div><h1>📊 Smart Attendance Report System</h1><p>District School Monitoring — Official Daily Report</p></div>
+      <div class="rpt-meta">Date: <strong id="rpt-date">—</strong>Generated: <span id="rpt-gen">—</span></div>
+    </div>
+    <div class="rpt-stats">
+      <div class="rpt-stat"><div class="v" id="rpt-rate">—</div><div class="l">District Rate</div></div>
+      <div class="rpt-stat"><div class="v" id="rpt-present">—</div><div class="l">Students Present</div></div>
+      <div class="rpt-stat"><div class="v" id="rpt-enrolled">—</div><div class="l">Total Enrolled</div></div>
+      <div class="rpt-stat"><div class="v" id="rpt-schools">—</div><div class="l">Schools Reported</div></div>
+    </div>
+    <table class="rpt-table">
+      <thead><tr><th>#</th><th>School</th><th>Present</th><th>Enrolled</th><th>Rate</th><th>Submitted</th></tr></thead>
+      <tbody id="rpt-tbody"></tbody>
+    </table>
+    <div id="rpt-classrooms"></div>
+    <div class="rpt-foot">Smart Attendance Report System · Generated <span id="rpt-gen2">—</span></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════
+// DEFAULT SCHOOLS LIST
+// ══════════════════════════════════════════════════
+const DEFAULT_SCHOOLS = [
+  {code:'SKA001',name:'SK Tanjung Aru'},
+  {code:'SKA002',name:'SK Likas'},
+  {code:'SKA003',name:'SK Luyang'},
+  {code:'SKA004',name:'SK Kepayan'},
+  {code:'SKA005',name:'SK Kolombong'},
+  {code:'SKA006',name:'SK Inanam'},
+  {code:'SKA007',name:'SK Menggatal'},
+  {code:'SKA008',name:'SK Telipok'},
+  {code:'SKA009',name:'SK Kingfisher'},
+  {code:'SKA010',name:'SK Lok Kawi'},
+  {code:'SKA011',name:'SJK(C) Chung Hwa'},
+  {code:'SKA012',name:'SJK(C) Khoo Choo Khye'},
+  {code:'SKA013',name:'SJK(C) Yee Ching'},
+  {code:'SKA014',name:'SJK(T) Tamil'},
+  {code:'SKA015',name:'SMK Likas'},
+];
+
+// ══════════════════════════════════════════════════
+// STORAGE HELPERS
+// ══════════════════════════════════════════════════
+const S = {
+  get:(k,def=null)=>{try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):def}catch{return def}},
+  set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),
+  del:(k)=>localStorage.removeItem(k),
+};
+
+function getUsers(){return S.get('sars_users',[])}
+function saveUsers(u){S.set('sars_users',u)}
+function getSchools(){return S.get('sars_schools',DEFAULT_SCHOOLS)}
+function saveSchools(s){S.set('sars_schools',s)}
+function getSupaConfig(){return S.get('sars_supa',{url:'',key:'',table:'attendance'})}
+function saveSupaConf(c){S.set('sars_supa',c)}
+
+// School class setup: key per school code
+function getSetup(code){return S.get('sars_setup_'+code,null)}
+function saveSetup2(code,classes){S.set('sars_setup_'+code,classes)}
+
+// Attendance record
+function getRecord(code,date){return S.get(`sars_rec_${code}_${date}`,null)}
+function saveRecord(rec){S.set(`sars_rec_${rec.school_code}_${rec.date}`,rec)}
+function getAllRecords(){
+  const out=[];
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k&&k.startsWith('sars_rec_')){try{out.push(JSON.parse(localStorage.getItem(k)))}catch{}}
+  }
+  return out.sort((a,b)=>b.submitted_at.localeCompare(a.submitted_at));
+}
+function getRecordsForDate(date){return getAllRecords().filter(r=>r.date===date)}
+
+function initDefaults(){
+  if(!getUsers().length){
+    saveUsers([
+      {username:'admin',  password:'admin123',  role:'admin',   display:'Administrator',  school:null, createdAt:new Date().toISOString()},
+      {username:'teacher',password:'teacher123',role:'teacher', display:'Default Teacher', school:'SKA001',createdAt:new Date().toISOString()},
+      {username:'officer',password:'officer123',role:'officer', display:'District Officer',school:null, createdAt:new Date().toISOString()},
+    ]);
+  }
+}
+
+// ══════════════════════════════════════════════════
+// SESSION
+// ══════════════════════════════════════════════════
+let CU = null; // current user
+
+function doLogin(){
+  const username=document.getElementById('l-user').value.trim();
+  const password=document.getElementById('l-pass').value;
+  const errEl=document.getElementById('l-err');
+  errEl.style.display='none';
+  if(!username||!password){errEl.textContent='⚠ Enter username and password.';errEl.style.display='block';return}
+  const user=getUsers().find(u=>u.username===username&&u.password===password);
+  if(!user){
+    errEl.textContent='✕ Incorrect username or password.';errEl.style.display='block';
+    document.getElementById('l-pass').classList.add('err');
+    setTimeout(()=>document.getElementById('l-pass').classList.remove('err'),1200);
+    return;
+  }
+  CU={...user};
+  showLanding();
+}
+
+function logout(){CU=null;showScreen('screen-login');document.getElementById('l-user').value='';document.getElementById('l-pass').value='';document.getElementById('l-err').style.display='none'}
+function togglePw(){const i=document.getElementById('l-pass');i.type=i.type==='password'?'text':'password'}
+
+// ══════════════════════════════════════════════════
+// LANDING
+// ══════════════════════════════════════════════════
+function showLanding(){
+  document.getElementById('land-greet').innerHTML=`Welcome, <strong style="color:#fff">${esc(CU.display||CU.username)}</strong>`;
+  const c=document.getElementById('land-cards');
+  let html='';
+  if(CU.role==='teacher'||CU.role==='admin')
+    html+=`<div class="role-card" onclick="openTeacher()"><div class="rc-icon">🏫</div><h3>Teacher</h3><p>Submit daily attendance</p></div>`;
+  if(CU.role==='officer'||CU.role==='admin')
+    html+=`<div class="role-card" onclick="openOfficer()"><div class="rc-icon">📋</div><h3>District Officer</h3><p>View district dashboard</p></div>`;
+  if(CU.role==='admin')
+    html+=`<div class="role-card" onclick="openAdmin()" style="grid-column:span 2;background:rgba(240,165,0,.1);border-color:rgba(240,165,0,.25)"><div class="rc-icon">🔑</div><h3>Admin Panel</h3><p>Users · Schools · Supabase config</p></div>`;
+  c.innerHTML=html;
+  showScreen('screen-landing');
+}
+
+function goHome(){if(CU)showLanding();else showScreen('screen-login')}
+
+// ══════════════════════════════════════════════════
+// TEACHER
+// ══════════════════════════════════════════════════
+function openTeacher(){
+  // find school assigned to this user
+  const user=getUsers().find(u=>u.username===CU.username);
+  const schoolCode=user&&user.school?user.school:null;
+  if(!schoolCode){showToast('⚠ No school assigned. Contact admin.');return}
+  const schools=getSchools();
+  const school=schools.find(s=>s.code===schoolCode);
+  if(!school){showToast('⚠ Assigned school not found. Contact admin.');return}
+  CU._school=school;
+  document.getElementById('t-school-title').textContent=school.name;
+  document.getElementById('t-school-sub').textContent=school.code;
+  document.getElementById('t-date').value=today();
+  // setup tab
+  document.getElementById('setup-school-name').textContent=school.name;
+  document.getElementById('setup-school-code').textContent=school.code;
+  loadSetupRows();
+  loadAttendanceForm();
+  tTab('att');
+  showScreen('screen-teacher');
+}
+
+function tTab(tab){
+  ['att','setup','hist'].forEach(t=>{
+    document.getElementById('tc-'+t).style.display='none';
+    document.getElementById('tb-'+t).classList.remove('active');
+  });
+  document.getElementById('tc-'+tab).style.display='block';
+  document.getElementById('tb-'+tab).classList.add('active');
+  if(tab==='hist')loadHistory();
+}
+
+// ─── CLASS SETUP ───
+let setupRowCounter=0;
+function loadSetupRows(){
+  const code=CU._school?CU._school.code:null;
+  if(!code)return;
+  const classes=getSetup(code)||[];
+  document.getElementById('setup-rows').innerHTML='';
+  setupRowCounter=0;
+  if(classes.length){
+    classes.forEach(c=>addSetupRow(c.name,c.enrolled));
+  } else {
+    addSetupRow();
+  }
+}
+function addSetupRow(name='',enrolled=''){
+  setupRowCounter++;
+  const id='sr'+setupRowCounter;
+  const div=document.createElement('div');
+  div.className='cs-row';div.id=id;
+  div.innerHTML=`
+    <input type="text" placeholder="e.g. 1 Bestari" value="${esc(name)}">
+    <input type="number" placeholder="0" min="0" value="${enrolled}">
+    <button class="cs-del" onclick="delSetupRow('${id}')"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>`;
+  document.getElementById('setup-rows').appendChild(div);
+}
+function delSetupRow(id){
+  const list=document.getElementById('setup-rows');
+  if(list.children.length<=1){showToast('⚠ Need at least one class.');return}
+  document.getElementById(id)?.remove();
+}
+function saveSetup(){
+  const code=CU._school?.code;
+  const errEl=document.getElementById('setup-err');
+  errEl.style.display='none';
+  const rows=document.querySelectorAll('#setup-rows .cs-row');
+  const classes=[];
+  let ok=true;
+  rows.forEach(row=>{
+    const inputs=row.querySelectorAll('input');
+    const name=inputs[0].value.trim();
+    const enrolled=parseInt(inputs[1].value)||0;
+    if(!name){ok=false;errEl.textContent='⚠ All classes must have a name.';errEl.style.display='flex';return}
+    classes.push({name,enrolled});
+  });
+  if(!ok)return;
+  saveSetup2(code,classes);
+  showToast('✓ Setup saved as default!');
+  // reload attendance form with new setup
+  loadAttendanceForm();
+}
+
+// ─── ATTENDANCE FORM ───
+function loadAttendanceForm(){
+  const code=CU._school?.code;
+  if(!code)return;
+  const classes=getSetup(code);
+  const noSetup=document.getElementById('t-nosetup');
+  const card=document.getElementById('t-att-card');
+  const actions=document.getElementById('t-att-actions');
+  if(!classes||!classes.length){
+    noSetup.style.display='flex';card.style.display='none';actions.style.display='none';return;
+  }
+  noSetup.style.display='none';card.style.display='block';actions.style.display='block';
+
+  // Check if record exists for this date
+  const date=document.getElementById('t-date').value;
+  const existing=getRecord(code,date);
+
+  const rows=document.getElementById('t-att-rows');
+  rows.innerHTML='';
+  classes.forEach((cls,i)=>{
+    const present=existing?existing.classrooms[i]?.present:'';
+    const rate=cls.enrolled>0&&present!==''?((present/cls.enrolled)*100).toFixed(1):'—';
+    const rateColor=present!==''?(parseFloat(rate)>=90?'var(--green)':parseFloat(rate)>=75?'var(--amber)':'var(--red)'):'var(--muted)';
+    const div=document.createElement('div');
+    div.className='att-row';div.dataset.i=i;
+    div.innerHTML=`
+      <div>
+        <div class="att-classname">${esc(cls.name)}</div>
+        <div class="att-enrolled">Enrolled: ${cls.enrolled}</div>
+      </div>
+      <div style="text-align:center;font-size:13px;font-weight:700;font-family:var(--mono);color:var(--muted)">${cls.enrolled}</div>
+      <input type="number" class="att-input" placeholder="0" min="0" max="${cls.enrolled}" value="${present}" oninput="onAttInput(this,${i},${cls.enrolled})">
+      <div class="att-rate" id="att-rate-${i}" style="color:${rateColor}">${rate==='—'?'—':rate+'%'}</div>`;
+    rows.appendChild(div);
+  });
+  updateTotals();
+  // Show existing badge
+  const badge=document.getElementById('t-att-badge');
+  if(existing){
+    badge.innerHTML=`<span class="pill pill-a">Saved ${fmtTime(existing.submitted_at)}</span>`;
+    document.getElementById('t-save-btn').textContent='↑ Update & Re-send';
+  } else {
+    badge.innerHTML='';
+    document.getElementById('t-save-btn').innerHTML='✓ Save &amp; Send to Dashboard';
+  }
+  document.getElementById('t-att-err').style.display='none';
+  document.getElementById('t-sync-status').textContent='';
+}
+
+function onAttInput(input,idx,enrolled){
+  const v=parseInt(input.value)||0;
+  input.classList.toggle('over',v>enrolled);
+  const rateEl=document.getElementById('att-rate-'+idx);
+  if(enrolled>0&&input.value!==''){
+    const r=(v/enrolled*100).toFixed(1);
+    rateEl.textContent=r+'%';
+    rateEl.style.color=parseFloat(r)>=90?'var(--green)':parseFloat(r)>=75?'var(--amber)':'var(--red)';
+  } else {
+    rateEl.textContent='—';rateEl.style.color='var(--muted)';
+  }
+  updateTotals();
+}
+
+function updateTotals(){
+  const code=CU._school?.code;
+  if(!code)return;
+  const classes=getSetup(code)||[];
+  const inputs=document.querySelectorAll('#t-att-rows .att-input');
+  let totE=0,totP=0,filled=0;
+  inputs.forEach((inp,i)=>{
+    const e=classes[i]?.enrolled||0;
+    const p=parseInt(inp.value)||0;
+    totE+=e;totP+=p;
+    if(inp.value!=='')filled++;
+  });
+  document.getElementById('t-tot-enrolled').textContent=totE;
+  document.getElementById('t-tot-present').textContent=filled>0?totP:'—';
+  if(filled>0&&totE>0){
+    const r=(totP/totE*100).toFixed(1);
+    const el=document.getElementById('t-tot-rate');
+    el.textContent=r+'%';
+    el.style.color=parseFloat(r)>=90?'var(--green)':parseFloat(r)>=75?'var(--amber)':'var(--red)';
+  } else {
+    document.getElementById('t-tot-rate').textContent='—';
+    document.getElementById('t-tot-rate').style.color='var(--text)';
+  }
+}
+
+async function saveAttendance(){
+  const code=CU._school?.code;
+  const date=document.getElementById('t-date').value;
+  const errEl=document.getElementById('t-att-err');
+  errEl.style.display='none';
+  if(!date){errEl.textContent='⚠ Select a date.';errEl.style.display='flex';return}
+
+  const classes=getSetup(code)||[];
+  const inputs=document.querySelectorAll('#t-att-rows .att-input');
+  const classrooms=[];
+  let valid=true;
+  inputs.forEach((inp,i)=>{
+    const cls=classes[i];
+    const present=parseInt(inp.value);
+    if(isNaN(present)||present<0){valid=false;errEl.textContent=`⚠ Enter a valid number for ${cls.name}.`;errEl.style.display='flex';return}
+    if(present>cls.enrolled){valid=false;errEl.textContent=`⚠ ${cls.name}: present (${present}) exceeds enrolled (${cls.enrolled}).`;errEl.style.display='flex';return}
+    classrooms.push({name:cls.name,enrolled:cls.enrolled,present,absent:cls.enrolled-present,rate:cls.enrolled>0?parseFloat((present/cls.enrolled*100).toFixed(2)):0});
+  });
+  if(!valid)return;
+
+  const totalEnrolled=classrooms.reduce((a,c)=>a+c.enrolled,0);
+  const totalPresent=classrooms.reduce((a,c)=>a+c.present,0);
+  const record={
+    id:genId(),
+    school_code:code,
+    school_name:CU._school.name,
+    date,
+    submitted_by:CU.username,
+    submitted_at:new Date().toISOString(),
+    total_enrolled:totalEnrolled,
+    total_present:totalPresent,
+    total_absent:totalEnrolled-totalPresent,
+    attendance_rate:totalEnrolled>0?parseFloat((totalPresent/totalEnrolled*100).toFixed(2)):0,
+    classrooms,
+  };
+
+  // Save locally
+  saveRecord(record);
+
+  // Send to Supabase
+  const btn=document.getElementById('t-save-btn');
+  const statusEl=document.getElementById('t-sync-status');
+  btn.disabled=true;btn.textContent='Sending…';
+  statusEl.textContent='';
+
+  const result=await pushToSupabase(record);
+  btn.disabled=false;
+
+  if(result.ok){
+    btn.innerHTML='✓ Sent!';
+    statusEl.innerHTML='<span style="color:var(--green)">✓ Synced to Supabase successfully</span>';
+    showToast('✓ Attendance saved & sent!');
+  } else {
+    btn.innerHTML='↑ Retry Send';
+    statusEl.innerHTML=`<span style="color:var(--amber)">⚠ Saved locally. Supabase error: ${result.error}</span>`;
+    showToast('Saved locally — Supabase sync failed');
+  }
+
+  loadAttendanceForm();
+}
+
+// ─── HISTORY ───
+function loadHistory(){
+  const code=CU._school?.code;
+  if(!code)return;
+  const records=getAllRecords().filter(r=>r.school_code===code);
+  const el=document.getElementById('t-hist-list');
+  if(!records.length){
+    el.innerHTML=`<div class="empty"><div class="empty-icon">📭</div><h3>No history yet</h3><p>Submissions will appear here.</p></div>`;
+    return;
+  }
+  el.innerHTML=records.map(r=>`
+    <div class="card ai" style="margin-bottom:10px">
+      <div class="card-body">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <strong style="font-size:14px;color:var(--navy)">${fmtDate(r.date)}</strong>
+          ${rb(r.attendance_rate)}
+        </div>
+        <div style="font-size:12px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap">
+          <span>👩‍🎓 ${r.total_present}/${r.total_enrolled} present</span>
+          <span>⏱ ${fmtTime(r.submitted_at)}</span>
+          <span>📚 ${r.classrooms.length} classes</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════════
+// OFFICER DASHBOARD
+// ══════════════════════════════════════════════════
+function openOfficer(){
+  document.getElementById('off-date').value=today();
+  loadDashboard();
+  showScreen('screen-officer');
+}
+function loadDashboard(){
+  const date=document.getElementById('off-date').value;
+  document.getElementById('off-datelabel').textContent=fmtDate(date);
+  const schools=getSchools();
+  document.getElementById('off-total-schools').textContent=schools.length;
+  const subs=getRecordsForDate(date);
+  const subCodes=new Set(subs.map(s=>s.school_code));
+  const totE=subs.reduce((a,s)=>a+s.total_enrolled,0);
+  const totP=subs.reduce((a,s)=>a+s.total_present,0);
+  const rate=totE>0?(totP/totE*100).toFixed(1)+'%':'—';
+  const missing=schools.filter(s=>!subCodes.has(s.code));
+
+  document.getElementById('off-rate').textContent=rate;
+  document.getElementById('off-present').textContent=totP||'—';
+  document.getElementById('off-enrolled').textContent=totE||'—';
+  document.getElementById('off-submitted').textContent=subs.length;
+  document.getElementById('off-missing').textContent=missing.length;
+
+  const ma=document.getElementById('off-missing-alert');
+  if(missing.length){ma.style.display='flex';document.getElementById('off-missing-list').textContent=missing.map(s=>s.name).join(', ')}
+  else ma.style.display='none';
+
+  const empty=document.getElementById('off-empty');
+  const tableCard=document.getElementById('off-table-card');
+  if(!subs.length){empty.style.display='block';tableCard.style.display='none';document.getElementById('off-drill').style.display='none';return}
+  empty.style.display='none';tableCard.style.display='block';
+
+  document.getElementById('off-tbody').innerHTML=subs.map(s=>`
+    <tr>
+      <td><strong style="font-size:13px">${esc(s.school_name)}</strong><br><span style="font-size:11px;color:var(--muted);font-family:var(--mono)">${s.school_code}</span></td>
+      <td class="mono" style="color:var(--green);font-weight:700">${s.total_present}</td>
+      <td class="mono">${s.total_enrolled}</td>
+      <td>${rb(s.attendance_rate)}</td>
+      <td style="font-size:12px;color:var(--muted)">${fmtTime(s.submitted_at)}</td>
+      <td><button style="background:none;border:none;cursor:pointer;color:var(--sky);font-size:13px;font-weight:700;font-family:var(--font)" onclick="drillDown('${s.school_code}','${date}')">▼</button></td>
+    </tr>`).join('');
+}
+
+function drillDown(code,date){
+  const subs=getRecordsForDate(date);
+  const rec=subs.find(s=>s.school_code===code);
+  if(!rec)return;
+  document.getElementById('drill-title').textContent=`${rec.school_name} — Classrooms`;
+  const body=document.getElementById('drill-body');
+  body.innerHTML=rec.classrooms.map(c=>{
+    const rateColor=c.rate>=90?'var(--green)':c.rate>=75?'var(--amber)':'var(--red)';
+    return `<div class="att-row">
+      <div><div class="att-classname">${esc(c.name)}</div></div>
+      <div style="text-align:center;font-family:var(--mono);font-size:14px">${c.enrolled}</div>
+      <div style="text-align:center;font-family:var(--mono);font-size:14px;font-weight:700;color:var(--green)">${c.present}</div>
+      <div style="text-align:center;font-family:var(--mono);font-size:14px;font-weight:700;color:${rateColor}">${c.rate}%</div>
+    </div>`;
+  }).join('');
+  document.getElementById('off-drill').style.display='block';
+  document.getElementById('off-drill').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function closeDrill(){document.getElementById('off-drill').style.display='none'}
+
+// ══════════════════════════════════════════════════
+// ADMIN
+// ══════════════════════════════════════════════════
+function openAdmin(){
+  loadAdminUsers();loadAdminSchools();loadSupaForm();
+  aTab('users');
+  showScreen('screen-admin');
+}
+function aTab(tab){
+  ['users','schools','supa'].forEach(t=>{
+    document.getElementById('ac-'+t).style.display='none';
+    document.getElementById('ab-'+t).classList.remove('active');
+  });
+  document.getElementById('ac-'+tab).style.display='block';
+  document.getElementById('ab-'+tab).classList.add('active');
+}
+
+// ─── ADMIN USERS ───
+function loadAdminUsers(){
+  const users=getUsers();
+  document.getElementById('adm-total').textContent=users.length;
+  document.getElementById('adm-roles').textContent=new Set(users.map(u=>u.role)).size;
+  populateSchoolSelects();
+  const roleIcon={teacher:'🏫',officer:'📋',admin:'🔑'};
+  const roleLabel={teacher:'Teacher',officer:'Officer',admin:'Admin'};
+  const avClass={teacher:'av-t',officer:'av-o',admin:'av-a'};
+  const pillClass={teacher:'pill-g',officer:'pill-b',admin:'pill-a'};
+  const schools=getSchools();
+  document.getElementById('adm-ulist').innerHTML=users.map(u=>{
+    const schoolName=u.school?schools.find(s=>s.code===u.school)?.name||u.school:'—';
+    return `<div class="u-row">
+      <div class="u-av ${avClass[u.role]||'av-t'}">${roleIcon[u.role]||'👤'}</div>
+      <div class="u-info">
+        <div class="u-name">${esc(u.display||u.username)}</div>
+        <div class="u-meta">@${esc(u.username)} · <span class="pill ${pillClass[u.role]}">${roleLabel[u.role]||u.role}</span>${u.school?` · 🏫 ${esc(schoolName)}`:''}</div>
+      </div>
+      <div class="u-acts">
+        <button class="btn btn-s btn-sm" onclick="openEdit('${esc(u.username)}')">✏️</button>
+        ${u.username!==CU.username?`<button class="btn btn-d btn-sm" onclick="deleteUser('${esc(u.username)}')">🗑</button>`:`<span style="font-size:11px;color:var(--muted);padding:0 6px">(you)</span>`}
+      </div>
+    </div>`;
+  }).join('')||'<div class="empty" style="padding:24px"><h3>No users</h3></div>';
+}
+
+function addUser(){
+  const username=document.getElementById('au-user').value.trim().toLowerCase();
+  const role=document.getElementById('au-role').value;
+  const password=document.getElementById('au-pass').value;
+  const display=document.getElementById('au-display').value.trim();
+  const school=document.getElementById('au-school').value||null;
+  const errEl=document.getElementById('au-err');
+  errEl.style.display='none';
+  if(!username){errEl.textContent='⚠ Username required.';errEl.style.display='flex';return}
+  if(!/^[a-z0-9_.-]+$/.test(username)){errEl.textContent='⚠ Invalid username (letters, numbers, _ . - only).';errEl.style.display='flex';return}
+  if(!password||password.length<4){errEl.textContent='⚠ Password must be at least 4 characters.';errEl.style.display='flex';return}
+  const users=getUsers();
+  if(users.find(u=>u.username===username)){errEl.textContent='⚠ Username already taken.';errEl.style.display='flex';return}
+  // If teacher, check school not already assigned
+  if(role==='teacher'&&school){
+    const existing=users.find(u=>u.role==='teacher'&&u.school===school);
+    if(existing){errEl.textContent=`⚠ ${getSchools().find(s=>s.code===school)?.name||school} already has a teacher account (${existing.username}).`;errEl.style.display='flex';return}
+  }
+  users.push({username,password,role,display:display||username,school:role==='teacher'?school:null,createdAt:new Date().toISOString()});
+  saveUsers(users);
+  ['au-user','au-pass','au-display'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('au-school').value='';
+  loadAdminUsers();
+  showToast(`✓ User "${username}" created`);
+}
+
+function openEdit(username){
+  const u=getUsers().find(x=>x.username===username);
+  if(!u)return;
+  document.getElementById('eu-orig').value=u.username;
+  document.getElementById('eu-user').value=u.username;
+  document.getElementById('eu-display').value=u.display||'';
+  document.getElementById('eu-role').value=u.role;
+  document.getElementById('eu-pass').value='';
+  document.getElementById('eu-err').style.display='none';
+  populateSchoolSelects('eu-school',u.school);
+  document.getElementById('modal-edit').classList.add('open');
+}
+
+function saveEdit(){
+  const orig=document.getElementById('eu-orig').value;
+  const username=document.getElementById('eu-user').value.trim().toLowerCase();
+  const display=document.getElementById('eu-display').value.trim();
+  const role=document.getElementById('eu-role').value;
+  const school=document.getElementById('eu-school').value||null;
+  const newPass=document.getElementById('eu-pass').value;
+  const errEl=document.getElementById('eu-err');
+  errEl.style.display='none';
+  if(!username){errEl.textContent='⚠ Username cannot be empty.';errEl.style.display='flex';return}
+  if(newPass&&newPass.length<4){errEl.textContent='⚠ Password must be at least 4 characters.';errEl.style.display='flex';return}
+  let users=getUsers();
+  if(username!==orig&&users.find(u=>u.username===username)){errEl.textContent='⚠ Username already taken.';errEl.style.display='flex';return}
+  users=users.map(u=>{
+    if(u.username!==orig)return u;
+    return{...u,username,display:display||username,role,school:role==='teacher'?school:null,password:newPass||u.password};
+  });
+  saveUsers(users);
+  if(orig===CU.username){CU.username=username;CU.role=role;CU.display=display||username}
+  closeModal('modal-edit');
+  loadAdminUsers();
+  showToast(`✓ User "${username}" updated`);
+}
+
+function deleteUser(username){
+  if(!confirm(`Delete user "${username}"? This cannot be undone.`))return;
+  saveUsers(getUsers().filter(u=>u.username!==username));
+  loadAdminUsers();
+  showToast(`🗑 User "${username}" deleted`);
+}
+
+// ─── ADMIN SCHOOLS ───
+function loadAdminSchools(){
+  const schools=getSchools();
+  document.getElementById('adm-slist').innerHTML=schools.map(s=>`
+    <div class="u-row">
+      <div class="u-av" style="background:var(--lite);font-size:18px">🏫</div>
+      <div class="u-info">
+        <div class="u-name">${esc(s.name)}</div>
+        <div class="u-meta" style="font-family:var(--mono)">${s.code}</div>
+      </div>
+      <div class="u-acts">
+        <button class="btn btn-d btn-sm" onclick="deleteSchool('${s.code}')">🗑</button>
+      </div>
+    </div>`).join('')||'<div class="empty" style="padding:24px"><h3>No schools</h3></div>';
+}
+
+function addSchool(){
+  const code=document.getElementById('sc-code').value.trim().toUpperCase();
+  const name=document.getElementById('sc-name').value.trim();
+  const errEl=document.getElementById('sc-err');errEl.style.display='none';
+  if(!code||!name){errEl.textContent='⚠ Both code and name are required.';errEl.style.display='flex';return}
+  const schools=getSchools();
+  if(schools.find(s=>s.code===code)){errEl.textContent='⚠ School code already exists.';errEl.style.display='flex';return}
+  schools.push({code,name});saveSchools(schools);
+  document.getElementById('sc-code').value='';document.getElementById('sc-name').value='';
+  loadAdminSchools();populateSchoolSelects();showToast(`✓ School "${name}" added`);
+}
+
+function deleteSchool(code){
+  if(!confirm(`Remove school ${code}?`))return;
+  saveSchools(getSchools().filter(s=>s.code!==code));
+  loadAdminSchools();populateSchoolSelects();showToast('🗑 School removed');
+}
+
+function populateSchoolSelects(targetId=null,selected=null){
+  const schools=getSchools();
+  const opt=(sel='')=>`<option value="">— Not applicable —</option>`+schools.map(s=>`<option value="${s.code}"${s.code===sel?' selected':''}>${esc(s.name)}</option>`).join('');
+  if(targetId){
+    document.getElementById(targetId).innerHTML=opt(selected||'');
+  } else {
+    ['au-school','eu-school'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opt()});
+  }
+}
+
+// ─── SUPABASE CONFIG ───
+function loadSupaForm(){
+  const cfg=getSupaConfig();
+  document.getElementById('sb-url').value=cfg.url||'';
+  document.getElementById('sb-key').value=cfg.key||'';
+  document.getElementById('sb-table').value=cfg.table||'attendance';
+}
+
+function saveSupaConfig(){
+  const url=document.getElementById('sb-url').value.trim();
+  const key=document.getElementById('sb-key').value.trim();
+  const table=document.getElementById('sb-table').value.trim()||'attendance';
+  const errEl=document.getElementById('sb-err');const okEl=document.getElementById('sb-ok');
+  errEl.style.display='none';okEl.style.display='none';
+  if(!url||!key){errEl.textContent='⚠ URL and Key are required.';errEl.style.display='flex';return}
+  if(!url.startsWith('https://')){errEl.textContent='⚠ URL must start with https://';errEl.style.display='flex';return}
+  saveSupaConf({url,key,table});
+  okEl.style.display='flex';
+  showToast('✓ Supabase config saved');
+}
+
+async function testSupabase(){
+  const cfg=getSupaConfig();
+  if(!cfg.url||!cfg.key){showToast('⚠ Save config first.');return}
+  showToast('Testing connection…');
+  try{
+    const res=await fetch(`${cfg.url}/rest/v1/${cfg.table}?limit=1`,{
+      headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key}
+    });
+    if(res.ok||res.status===200){showToast('✓ Connection successful!')}
+    else if(res.status===401){showToast('✕ Auth failed — check your key')}
+    else if(res.status===404){showToast(`✕ Table "${cfg.table}" not found`)}
+    else showToast(`Connection returned: ${res.status}`);
+  }catch(e){showToast('✕ Network error — check URL')}
+}
+
+// ══════════════════════════════════════════════════
+// SUPABASE PUSH
+// ══════════════════════════════════════════════════
+async function pushToSupabase(record){
+  const cfg=getSupaConfig();
+  if(!cfg.url||!cfg.key)return{ok:false,error:'Supabase not configured'};
+  try{
+    const payload={
+      school_code:record.school_code,
+      school_name:record.school_name,
+      date:record.date,
+      submitted_by:record.submitted_by,
+      submitted_at:record.submitted_at,
+      total_enrolled:record.total_enrolled,
+      total_present:record.total_present,
+      total_absent:record.total_absent,
+      attendance_rate:record.attendance_rate,
+      classrooms:record.classrooms,
+    };
+    const res=await fetch(`${cfg.url}/rest/v1/${cfg.table}`,{
+      method:'POST',
+      headers:{
+        'apikey':cfg.key,
+        'Authorization':'Bearer '+cfg.key,
+        'Content-Type':'application/json',
+        'Prefer':'resolution=merge-duplicates',
+      },
+      body:JSON.stringify(payload),
+    });
+    if(res.ok||res.status===201||res.status===200)return{ok:true};
+    const body=await res.text();
+    return{ok:false,error:`HTTP ${res.status}: ${body.slice(0,80)}`};
+  }catch(e){return{ok:false,error:e.message}}
+}
+
+// ══════════════════════════════════════════════════
+// EXPORT / PRINT
+// ══════════════════════════════════════════════════
+function exportJSON(){
+  const date=document.getElementById('off-date').value;
+  const subs=getRecordsForDate(date);
+  if(!subs.length){showToast('⚠ No data for this date');return}
+  const blob=new Blob([JSON.stringify(subs,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`attendance-${date}.json`;a.click();
+  showToast('JSON exported ✓');
+}
+
+function printReport(){
+  const date=document.getElementById('off-date').value;
+  const subs=getRecordsForDate(date);
+  if(!subs.length){showToast('⚠ No data for this date');return}
+  const totE=subs.reduce((a,s)=>a+s.total_enrolled,0);
+  const totP=subs.reduce((a,s)=>a+s.total_present,0);
+  const rate=totE>0?(totP/totE*100).toFixed(1)+'%':'—';
+  const gen=new Date().toLocaleString('en-MY');
+  document.getElementById('rpt-date').textContent=fmtDate(date);
+  document.getElementById('rpt-gen').textContent=gen;
+  document.getElementById('rpt-gen2').textContent=gen;
+  document.getElementById('rpt-rate').textContent=rate;
+  document.getElementById('rpt-present').textContent=totP;
+  document.getElementById('rpt-enrolled').textContent=totE;
+  document.getElementById('rpt-schools').textContent=subs.length;
+  document.getElementById('rpt-tbody').innerHTML=subs.map((s,i)=>{
+    const r=s.total_enrolled>0?(s.total_present/s.total_enrolled*100).toFixed(1)+'%':'—';
+    const rc=parseFloat(r)>=90?'#1DB87A':parseFloat(r)>=75?'#F0A500':'#E63946';
+    return `<tr><td>${i+1}</td><td>${esc(s.school_name)}</td><td>${s.total_present}</td><td>${s.total_enrolled}</td><td><strong style="color:${rc}">${r}</strong></td><td style="font-size:11px">${fmtTime(s.submitted_at)}</td></tr>`;
+  }).join('');
+  document.getElementById('rpt-classrooms').innerHTML=subs.map(s=>`
+    <div style="margin-top:14px;page-break-inside:avoid">
+      <h4 style="color:#0D2137;font-size:12px;margin-bottom:6px;border-left:3px solid #2E8BC0;padding-left:8px">${esc(s.school_name)}</h4>
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead><tr><th style="background:#e0eaf5;color:#0D2137;padding:5px 8px;text-align:left">Class</th><th style="background:#e0eaf5;color:#0D2137;padding:5px 8px">Enrolled</th><th style="background:#e0eaf5;color:#0D2137;padding:5px 8px">Present</th><th style="background:#e0eaf5;color:#0D2137;padding:5px 8px">Rate</th></tr></thead>
+        <tbody>${s.classrooms.map(c=>`<tr><td style="padding:5px 8px;border-bottom:1px solid #eee">${esc(c.name)}</td><td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:center">${c.enrolled}</td><td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:center">${c.present}</td><td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:center"><strong style="color:${c.rate>=90?'#1DB87A':c.rate>=75?'#F0A500':'#E63946'}">${c.rate}%</strong></td></tr>`).join('')}</tbody>
+      </table>
+    </div>`).join('');
+  window.print();
+}
+
+function clearCache(){
+  if(!confirm('Clear all local attendance cache? Supabase data is unaffected.'))return;
+  const keys=[];
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('sars_rec_'))keys.push(k)}
+  keys.forEach(k=>localStorage.removeItem(k));
+  showToast(`🗑 Cleared ${keys.length} record(s)`);
+}
+
+// ══════════════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════════════
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0)}
+function today(){return new Date().toISOString().slice(0,10)}
+function fmtDate(iso){if(!iso)return'—';return new Date(iso+'T00:00:00').toLocaleDateString('en-MY',{weekday:'short',year:'numeric',month:'short',day:'numeric'})}
+function fmtTime(iso){if(!iso)return'—';return new Date(iso).toLocaleTimeString('en-MY',{hour:'2-digit',minute:'2-digit'})}
+function rb(rate){
+  if(isNaN(rate))return'<span class="rb" style="background:#eee;color:#999">—</span>';
+  const cls=rate>=90?'rb-hi':rate>=75?'rb-md':'rb-lo';
+  return`<span class="rb ${cls}">${rate.toFixed(1)}%</span>`;
+}
+function showToast(msg,dur=2800){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur)}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function genId(){return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&0x3|0x8)).toString(16)})}
+
+// ══════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  initDefaults();
+  showScreen('screen-login');
+});
+</script>
+</body>
 </html>
