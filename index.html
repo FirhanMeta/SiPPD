@@ -795,7 +795,16 @@ function doLogin(){
     return;
   }
   CU={...user};
+  localStorage.setItem('sars_session', JSON.stringify(CU)); // ADD THIS
   showLanding();
+}
+function logout(){
+  CU=null;
+  localStorage.removeItem('sars_session'); // ADD THIS
+  showScreen('screen-login');
+  document.getElementById('l-user').value='';
+  document.getElementById('l-pass').value='';
+  document.getElementById('l-err').style.display='none';
 }
 
 function logout(){CU=null;showScreen('screen-login');document.getElementById('l-user').value='';document.getElementById('l-pass').value='';document.getElementById('l-err').style.display='none'}
@@ -1485,7 +1494,19 @@ function genId(){return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=
 // ══════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded',()=>{
   initDefaults();
-  showScreen('screen-login');
+  // ADD THIS BLOCK
+  const saved = localStorage.getItem('sars_session');
+  if(saved){
+    try{
+      CU = JSON.parse(saved);
+      showLanding(); // skip login screen
+    } catch{
+      localStorage.removeItem('sars_session');
+      showScreen('screen-login');
+    }
+  } else {
+    showScreen('screen-login');
+  }
 });
 </script>
 </body>
