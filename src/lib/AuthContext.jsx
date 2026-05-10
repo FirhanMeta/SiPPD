@@ -4,8 +4,8 @@ import { supabase } from './supabase';
 const AuthContext = createContext({});
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser]     = useState(null);
-  const [profile, setProfile] = useState(null); // { role, school_id, district_id, full_name }
+  const [user, setUser]       = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId) => {
@@ -18,14 +18,16 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    // v2: getSession() is async
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id).finally(() => setLoading(false));
+    // Fix: clear bad/corrupted session on load
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        supabase.auth.signOut();
+        setUser(null);
       } else {
-        setLoading(false);
+        setUser(session?.user ?? null);
+        if (session?.user) fetchProfile(session.user.id);
       }
+      setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
