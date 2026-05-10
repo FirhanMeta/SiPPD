@@ -20,10 +20,10 @@ const STATUS_COLORS = {
 };
 
 const InstitutionManager = () => {
-  const [states, setStates] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [schools, setSchools]     = useState([]);
   const [users, setUsers]         = useState([]);
+  const [states, setStates] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [activeTab, setActiveTab] = useState('schools');
   const [search, setSearch]       = useState('');
