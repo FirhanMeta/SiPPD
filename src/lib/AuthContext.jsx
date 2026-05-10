@@ -4,39 +4,53 @@ import { supabase } from './supabase';
 const AuthContext = createContext({});
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [role, setRole] = useState(null); // 'superadmin', 'ppd', or 'guru'
+  const [user, setUser]     = useState(null);
+  const [profile, setProfile] = useState(null); // { role, school_id, district_id, full_name }
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Check active sessions
-    const session = supabase.auth.session();
-    setUser(session?.user ?? null);
-    
-    // Fetch user role from your 'profiles' table
-    if (session?.user) {
-      getUserRole(session.user.id);
-    } else {
-      setLoading(false);
-    }
+  const fetchProfile = async (userId) => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    setProfile(data ?? null);
+  };
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+  useEffect(() => {
+    // v2: getSession() is async
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      if (session?.user) await getUserRole(session.user.id);
-      setLoading(false);
+      if (session?.user) {
+        fetchProfile(session.user.id).finally(() => setLoading(false));
+      } else {
+        setLoading(false);
+      }
     });
 
-    return () => authListener.unsubscribe();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        } else {
+          setProfile(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const getUserRole = async (userId) => {
-    const { data } = await supabase.from('profiles').select('role').eq('id', userId).single();
-    setRole(data?.role);
-    setLoading(false);
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, loading }}>
+    <AuthContext.Provider value={{ user, profile, loading, signOut }}>
       {!loading && children}
     </AuthContext.Provider>
   );

@@ -1,17 +1,13 @@
-import React from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { useAuth } from '../lib/AuthContext';
 
-const DashboardLayout = ({ children }) => {
-  const { user, profile } = useAuth(); // Assuming profile is fetched in context
-
+const DashboardLayout = ({ children, title }) => {
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-      <div className="flex-1 flex flex-col">
-        <Header userName={user?.email?.split('@')[0]} />
-        <main className="p-6">
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header title={title} />
+        <main className="flex-1 p-6 overflow-auto">
           {children}
         </main>
       </div>

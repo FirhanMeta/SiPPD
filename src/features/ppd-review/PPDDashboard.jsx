@@ -1,119 +1,301 @@
-import React, { useState } from 'react';
-import { BarChart3, TrendingUp, AlertCircle, Award } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
+import DashboardLayout from '../../components/DashboardLayout';
+import {
+  BarChart3, TrendingUp, AlertCircle, Award,
+  School, ChevronDown, RefreshCw, Download, Loader2,
+  CheckCircle2, XCircle, MinusCircle
+} from 'lucide-react';
+
+const MONTHS = [
+  'Januari','Februari','Mac','April','Mei','Jun',
+  'Julai','Ogos','September','Oktober','November','Disember'
+];
+const CURRENT_YEAR = new Date().getFullYear();
+
+const getStatus = (pct) => {
+  if (pct >= 95) return { label: 'Platinum Pengarah', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', icon: CheckCircle2, textColor: 'text-emerald-600' };
+  if (pct >= 90) return { label: 'Platinum', color: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500', icon: MinusCircle, textColor: 'text-amber-600' };
+  return { label: 'Ke Arah KPI', color: 'bg-red-50 text-red-700 border-red-200', dot: 'bg-red-500', icon: XCircle, textColor: 'text-red-600' };
+};
 
 const PPDDashboard = () => {
-  // Mock data based on February 2026 report [cite: 28, 31, 34]
-  const [schools] = useState([
-    { name: 'SK PULAU MABUL', pct: 98.37, type: 'SK' },
-    { name: 'SK KAMPUNG POKAS', pct: 97.08, type: 'SK' },
-    { name: 'SK HAMPALAN', pct: 95.16, type: 'SK' },
-    { name: 'SMK AGAMA TUN SAKARAN', pct: 94.43, type: 'SMK' },
-    { name: 'SK KUBANG PINANG', pct: 91.80, type: 'SK' },
-    { name: 'SK BUBUL II', pct: 90.34, type: 'SK' },
-    { name: 'SMK BUGAYA', pct: 88.02, type: 'SMK' },
-  ]);
+  const [reports, setReports]   = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [month, setMonth]       = useState(MONTHS[new Date().getMonth()]);
+  const [year, setYear]         = useState(CURRENT_YEAR);
+  const [typeFilter, setTypeFilter] = useState('Semua');
+  const [lastRefresh, setLastRefresh] = useState(new Date());
 
-  // Sorting Logic: Tier first, then Percentage descending [cite: 11-14]
-  const sortedSchools = [...schools].sort((a, b) => b.pct - a.pct);
+  const fetchReports = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('attendance_reports')
+      .select(`
+        *,
+        schools ( name, type, district_id )
+      `)
+      .eq('month', month)
+      .eq('year', year)
+      .order('average_percentage', { ascending: false });
 
-  const getStatus = (pct) => {
-    if (pct >= 95.0) return { label: 'Platinum KPI Pengarah', color: 'bg-green-100 text-green-700', border: 'border-green-500' };
-    if (pct >= 90.0) return { label: 'Platinum', color: 'bg-yellow-100 text-yellow-700', border: 'border-yellow-500' };
-    return { label: 'Ke Arah Capai KPI', color: 'bg-red-100 text-red-700', border: 'border-red-500' };
+    if (!error && data) {
+      setReports(data);
+    }
+    setLastRefresh(new Date());
+    setLoading(false);
   };
 
+  useEffect(() => { fetchReports(); }, [month, year]);
+
+  const filtered = typeFilter === 'Semua'
+    ? reports
+    : reports.filter((r) => r.schools?.type === typeFilter);
+
+  const totalEnrolment = filtered.reduce((s, r) => s + (r.total_enrolment || 0), 0);
+  const totalPresent   = filtered.reduce((s, r) => s + (r.total_present || 0), 0);
+  const overallPct     = totalEnrolment > 0 ? ((totalPresent / totalEnrolment) * 100).toFixed(2) : '0.00';
+
+  const skSchools  = reports.filter((r) => r.schools?.type === 'SK');
+  const smkSchools = reports.filter((r) => r.schools?.type === 'SMK');
+
+  const avg = (arr) => {
+    if (!arr.length) return '0.00';
+    return (arr.reduce((s, r) => s + (r.average_percentage || 0), 0) / arr.length).toFixed(2);
+  };
+
+  const platinum   = filtered.filter((r) => r.average_percentage >= 95).length;
+  const belowKPI   = filtered.filter((r) => r.average_percentage < 90).length;
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* idMe Style Top Header */}
-      <div className="bg-white border-b px-8 py-4 flex justify-between items-center shadow-sm">
-        <div className="flex items-center gap-3">
-          <BarChart3 className="text-[#11a9bc]" size={28} />
-          <h1 className="text-xl font-bold text-gray-800 uppercase">Analisis KPI Kehadiran Daerah</h1>
-        </div>
-        <div className="text-right">
-            <p className="text-xs font-bold text-gray-500">PPD SEMPORNA</p>
-            <p className="text-sm font-black text-[#11a9bc]">FEB 2026</p>
-        </div>
-      </div>
+    <DashboardLayout title="Analisis KPI Kehadiran">
+      <div className="max-w-7xl mx-auto space-y-6">
 
-      <div className="p-8">
-        {/* KPI Summary Cards [cite: 36, 41-43] */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-xl border-l-4 border-green-500 shadow-sm">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase">Keseluruhan PPD</p>
-                <p className="text-3xl font-black text-gray-800">89.86%</p>
-              </div>
-              <TrendingUp className="text-gray-300" size={32} />
+        {/* Filter Bar */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-4 flex flex-wrap gap-3 items-center justify-between">
+          <div className="flex items-center gap-3">
+            {/* Month */}
+            <div className="relative">
+              <select
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 text-xs font-bold rounded-lg px-3 py-2 pr-7 focus:outline-none focus:border-teal-500"
+              >
+                {MONTHS.map((m) => <option key={m}>{m}</option>)}
+              </select>
+              <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             </div>
-            <p className="text-[10px] mt-2 text-red-600 font-bold">Target: 95.0%</p>
-          </div>
-          
-          <div className="bg-white p-6 rounded-xl border-l-4 border-[#11a9bc] shadow-sm">
-            <p className="text-xs font-bold text-gray-500 uppercase">Purata Rendah (SK)</p>
-            <p className="text-3xl font-black text-[#11a9bc]">91.45%</p>
+            {/* Year */}
+            <div className="relative">
+              <select
+                value={year}
+                onChange={(e) => setYear(parseInt(e.target.value))}
+                className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 text-xs font-bold rounded-lg px-3 py-2 pr-7 focus:outline-none focus:border-teal-500"
+              >
+                {[CURRENT_YEAR-1, CURRENT_YEAR, CURRENT_YEAR+1].map((y) => <option key={y}>{y}</option>)}
+              </select>
+              <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            </div>
+            {/* Type Filter */}
+            <div className="flex gap-1">
+              {['Semua','SK','SMK'].map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTypeFilter(t)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                    typeFilter === t
+                      ? 'bg-teal-500 text-white'
+                      : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl border-l-4 border-orange-500 shadow-sm">
-            <p className="text-xs font-bold text-gray-500 uppercase">Purata Menengah (SMK)</p>
-            <p className="text-3xl font-black text-orange-600">87.78%</p>
+          <div className="flex items-center gap-3">
+            <p className="text-[11px] text-gray-400 font-medium">
+              Dikemaskini: {lastRefresh.toLocaleTimeString('ms-MY')}
+            </p>
+            <button
+              onClick={fetchReports}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-100 transition"
+            >
+              <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+              Muat Semula
+            </button>
           </div>
         </div>
 
-        {/* Analytics Table */}
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <div className="bg-[#2d2d2d] text-white px-6 py-4 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Award size={20} className="text-yellow-400" />
-                <span className="text-sm font-bold uppercase tracking-wider">Kedudukan Prestasi Sekolah</span>
+        {/* KPI Summary Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            {
+              label: 'Keseluruhan PPD',
+              value: `${overallPct}%`,
+              sub: 'Sasaran: 95.0%',
+              subColor: parseFloat(overallPct) >= 95 ? 'text-green-500' : 'text-red-500',
+              border: 'border-l-4 border-teal-500',
+              icon: BarChart3,
+              iconColor: 'text-teal-500',
+            },
+            {
+              label: 'Purata SK',
+              value: `${avg(skSchools)}%`,
+              sub: `${skSchools.length} sekolah`,
+              subColor: 'text-gray-400',
+              border: 'border-l-4 border-blue-500',
+              icon: School,
+              iconColor: 'text-blue-500',
+            },
+            {
+              label: 'Purata SMK',
+              value: `${avg(smkSchools)}%`,
+              sub: `${smkSchools.length} sekolah`,
+              subColor: 'text-gray-400',
+              border: 'border-l-4 border-violet-500',
+              icon: School,
+              iconColor: 'text-violet-500',
+            },
+            {
+              label: 'Platinum KPI',
+              value: `${platinum}`,
+              sub: `${belowKPI} sekolah kritikal`,
+              subColor: belowKPI > 0 ? 'text-red-500' : 'text-green-500',
+              border: 'border-l-4 border-amber-500',
+              icon: Award,
+              iconColor: 'text-amber-500',
+            },
+          ].map((card) => {
+            const Icon = card.icon;
+            return (
+              <div key={card.label} className={`bg-white rounded-xl shadow-sm p-5 ${card.border}`}>
+                <div className="flex justify-between items-start mb-2">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{card.label}</p>
+                  <Icon size={18} className={card.iconColor} />
+                </div>
+                <p className="text-2xl font-black text-gray-800 mb-1">{card.value}</p>
+                <p className={`text-[11px] font-bold ${card.subColor}`}>{card.sub}</p>
               </div>
-              <button className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded border border-white/20 transition">Export PDF</button>
+            );
+          })}
+        </div>
+
+        {/* School Rankings Table */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="bg-[#0f1923] px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Award size={18} className="text-amber-400" />
+              <span className="text-white text-sm font-bold uppercase tracking-wider">
+                Kedudukan Prestasi Sekolah
+              </span>
+              <span className="ml-2 px-2 py-0.5 bg-white/10 rounded text-white/60 text-xs font-mono">
+                {filtered.length} sekolah
+              </span>
+            </div>
+            <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-white text-xs font-bold transition border border-white/10">
+              <Download size={13} />
+              Export PDF
+            </button>
           </div>
-          
-          <table className="w-full text-left">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase">Bil</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase">Nama Sekolah</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase text-center">Peratus (%)</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase">Status Anugerah</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase text-right">Nota</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {sortedSchools.map((school, index) => {
-                const status = getStatus(school.pct);
-                return (
-                  <tr key={index} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 text-sm font-bold text-gray-400">{index + 1}</td>
-                    <td className="px-6 py-4">
-                        <div className="text-sm font-bold text-gray-800">{school.name}</div>
-                        <div className="text-[10px] text-gray-500 font-bold">{school.type}</div>
-                    </td>
-                    <td className={`px-6 py-4 text-sm font-black text-center ${school.pct >= 95 ? 'text-green-600' : 'text-gray-700'}`}>
-                        {school.pct}%
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded text-[10px] font-black uppercase border ${status.color} ${status.border}`}>
-                        {status.label}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                        {school.pct < 95 && (
-                            <button title="Lihat Justifikasi" className="text-orange-500 hover:text-orange-700 transition">
-                                <AlertCircle size={18} />
-                            </button>
-                        )}
-                    </td>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
+              <Loader2 size={22} className="animate-spin text-teal-500" />
+              <span className="text-sm font-medium">Memuatkan data...</span>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+              <BarChart3 size={32} className="mb-3 text-gray-200" />
+              <p className="text-sm font-medium">Tiada laporan untuk {month} {year}</p>
+              <p className="text-xs mt-1">Sekolah belum menghantar laporan bagi bulan ini.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    {['Bil','Nama Sekolah','Jenis','Enrolmen','Hadir','Peratus (%)','Status','Tindakan'].map((h) => (
+                      <th key={h} className="px-5 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filtered.map((report, i) => {
+                    const pct = report.average_percentage ?? 0;
+                    const status = getStatus(pct);
+                    const StatusIcon = status.icon;
+                    return (
+                      <tr key={report.id} className="hover:bg-gray-50/60 transition">
+                        <td className="px-5 py-4 text-sm font-black text-gray-300">{i + 1}</td>
+                        <td className="px-5 py-4">
+                          <p className="text-sm font-bold text-gray-800 leading-tight">
+                            {report.schools?.name ?? `Sekolah ID: ${report.school_id}`}
+                          </p>
+                          <p className="text-[10px] text-gray-400 font-medium mt-0.5">
+                            {report.status === 'Submitted' ? '✓ Telah dihantar' : '● Draf'}
+                          </p>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${
+                            report.schools?.type === 'SK'
+                              ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                              : 'bg-violet-50 text-violet-600 border border-violet-200'
+                          }`}>
+                            {report.schools?.type ?? '—'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-sm font-semibold text-gray-600">
+                          {report.total_enrolment?.toLocaleString() ?? '—'}
+                        </td>
+                        <td className="px-5 py-4 text-sm font-semibold text-gray-600">
+                          {report.total_present?.toLocaleString() ?? '—'}
+                        </td>
+                        <td className="px-5 py-4">
+                          {/* Progress Bar */}
+                          <div className="flex items-center gap-2">
+                            <div className="w-20 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${
+                                  pct >= 95 ? 'bg-emerald-500' : pct >= 90 ? 'bg-amber-500' : 'bg-red-500'
+                                }`}
+                                style={{ width: `${Math.min(pct, 100)}%` }}
+                              />
+                            </div>
+                            <span className={`text-sm font-black ${status.textColor}`}>
+                              {pct.toFixed(2)}%
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${status.color}`}>
+                            <StatusIcon size={11} />
+                            {status.label}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          {pct < 95 && report.justification && (
+                            <button
+                              title={report.justification}
+                              className="text-orange-400 hover:text-orange-600 transition"
+                            >
+                              <AlertCircle size={17} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 
