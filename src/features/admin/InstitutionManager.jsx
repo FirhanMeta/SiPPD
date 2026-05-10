@@ -23,7 +23,6 @@ const InstitutionManager = () => {
   const [districts, setDistricts] = useState([]);
   const [schools, setSchools]     = useState([]);
   const [users, setUsers]         = useState([]);
-  const [states, setStates] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [activeTab, setActiveTab] = useState('schools');
   const [search, setSearch]       = useState('');
@@ -52,19 +51,17 @@ const InstitutionManager = () => {
   };
 
   const fetchAll = async () => {
-  setLoading(true);
-  const [{ data: d }, { data: s }, { data: p }, { data: st }] = await Promise.all([
-    supabase.from('districts').select('*, states(name)').order('name'),
-    supabase.from('schools').select('*, districts(name)').order('name'),
-    supabase.from('profiles').select('*, schools(name)').order('email'),
-    supabase.from('states').select('*').order('name'),
-  ]);
-  setDistricts(d ?? []);
-  setSchools(s ?? []);
-  setUsers(p ?? []);
-  setStates(st ?? []);
-  setLoading(false);
-};
+    setLoading(true);
+    const [{ data: d }, { data: s }, { data: p }] = await Promise.all([
+      supabase.from('districts').select('*').order('name'),
+      supabase.from('schools').select('*, districts(name)').order('name'),
+      supabase.from('profiles').select('*, schools(name)').order('email'),
+    ]);
+    setDistricts(d ?? []);
+    setSchools(s ?? []);
+    setUsers(p ?? []);
+    setLoading(false);
+  };
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -452,114 +449,81 @@ const InstitutionManager = () => {
               <button onClick={() => setRegisterModal(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
             </div>
             <div className="p-6 space-y-4">
-            {/* Nama */}
-            <div>
-              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Nama Penuh</label>
-              <input
-                value={registerForm.full_name}
-                onChange={(e) => setRegisterForm({ ...registerForm, full_name: e.target.value })}
-                placeholder="Nama penuh pengguna"
-                className="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-teal-500"
-              />
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">E-mel</label>
-              <input
-                type="email"
-                value={registerForm.email}
-                onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
-                placeholder="nama@moe.gov.my"
-                className="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-teal-500"
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Kata Laluan</label>
-              <div className="relative">
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Nama Penuh</label>
                 <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={registerForm.password}
-                  onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
-                  placeholder="Minimum 6 aksara"
-                  className="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-teal-500"
+                  value={registerForm.full_name}
+                  onChange={(e) => setRegisterForm({ ...registerForm, full_name: e.target.value })}
+                  placeholder="Nama penuh pengguna"
+                  className="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-teal-500"
                 />
-                <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
               </div>
-            </div>
-
-            {/* Role */}
-            <div>
-              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Peranan</label>
-              <select
-                value={registerForm.role}
-                onChange={(e) => setRegisterForm({ ...registerForm, role: e.target.value, state_id: '', district_id: '', school_id: '' })}
-                className="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-teal-500"
-              >
-                {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
-              </select>
-            </div>
-
-            {/* Level 1 — Negeri (all roles) */}
-            <div>
-              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-                Negeri (JPN)
-              </label>
-              <select
-                value={registerForm.state_id}
-                onChange={(e) => setRegisterForm({ ...registerForm, state_id: e.target.value, district_id: '', school_id: '' })}
-                className="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-teal-500"
-              >
-                <option value="">— Pilih Negeri —</option>
-                {states.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
-              </select>
-            </div>
-
-            {/* Level 2 — PPD/Daerah (filtered by negeri) */}
-            {registerForm.state_id && (
               <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-                  PPD / Daerah
-                </label>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">E-mel</label>
+                <input
+                  type="email"
+                  value={registerForm.email}
+                  onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
+                  placeholder="nama@moe.gov.my"
+                  className="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-teal-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Kata Laluan</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={registerForm.password}
+                    onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
+                    placeholder="Minimum 6 aksara"
+                    className="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-teal-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Peranan</label>
                 <select
-                  value={registerForm.district_id}
-                  onChange={(e) => setRegisterForm({ ...registerForm, district_id: e.target.value, school_id: '' })}
+                  value={registerForm.role}
+                  onChange={(e) => setRegisterForm({ ...registerForm, role: e.target.value })}
                   className="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-teal-500"
                 >
-                  <option value="">— Pilih PPD —</option>
-                  {districts
-                    .filter(d => d.state_id === registerForm.state_id)
-                    .map(d => <option key={d.id} value={d.id}>{d.name}</option>)
-                  }
+                  {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                 </select>
               </div>
-            )}
-
-            {/* Level 3 — Sekolah (only for guru, filtered by district) */}
-            {registerForm.role === 'guru' && registerForm.district_id && (
-              <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-                  Sekolah
-                </label>
-                <select
-                  value={registerForm.school_id}
-                  onChange={(e) => setRegisterForm({ ...registerForm, school_id: e.target.value })}
-                  className="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-teal-500"
-                >
-                  <option value="">— Pilih Sekolah —</option>
-                  {schools
-                    .filter(s => s.district_id === registerForm.district_id)
-                    .map(s => <option key={s.id} value={s.id}>{s.name} ({s.type})</option>)
-                  }
-                </select>
-              </div>
-            )}
-          </div>
+              {registerForm.role === 'guru' && (
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Sekolah</label>
+                  <select
+                    value={registerForm.school_id}
+                    onChange={(e) => setRegisterForm({ ...registerForm, school_id: e.target.value })}
+                    className="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-teal-500"
+                  >
+                    <option value="">— Pilih Sekolah —</option>
+                    {schools.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+              )}
+              {(registerForm.role === 'ppd' || registerForm.role === 'superadmin') && (
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Daerah</label>
+                  <select
+                    value={registerForm.district_id}
+                    onChange={(e) => setRegisterForm({ ...registerForm, district_id: e.target.value })}
+                    className="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-teal-500"
+                  >
+                    <option value="">— Pilih Daerah —</option>
+                    {districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
             <div className="flex gap-3 px-6 pb-6">
               <button onClick={() => setRegisterModal(false)} className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-50">Batal</button>
               <button onClick={handleRegisterUser} disabled={saving} className="flex-1 py-2.5 bg-teal-500 hover:bg-teal-400 text-white rounded-lg text-sm font-bold transition disabled:opacity-50">
