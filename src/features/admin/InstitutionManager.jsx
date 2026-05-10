@@ -515,11 +515,19 @@ const InstitutionManager = () => {
                   <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Daerah</label>
                   <select
                     value={registerForm.district_id}
-                    onChange={(e) => setRegisterForm({ ...registerForm, district_id: e.target.value })}
-                    className="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-teal-500"
-                  >
-                    <option value="">— Pilih Daerah —</option>
-                    {districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                      onChange={(e) => setRegisterForm({ ...registerForm, district_id: e.target.value })}
+                        className="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-teal-500"
+                        >
+                        <option value="">— Pilih PPD —</option>
+                          {/* Group by state */}
+                            {[...new Set(districts.map(d => d.states?.name))].filter(Boolean).map(stateName => (
+                      <optgroup key={stateName} label={stateName}>
+                            {districts
+                          .filter(d => d.states?.name === stateName)
+                            .map(d => <option key={d.id} value={d.id}>{d.name}</option>)
+                            }
+                      </optgroup>
+                    ))}
                   </select>
                 </div>
               )}
