@@ -313,7 +313,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       </div>
       <button class="l-btn" onclick="doLogin()">Sign In →</button>
     </div>
-    <p class="l-footer">v2.0 · Data synced to Supabase</p>
+    <p class="l-footer">Hakcipta terpelihara @2026 v2.0 oleh Cikgu Firhan </p>
   </div>
 </div>
 
@@ -744,6 +744,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <div id="toast"></div>
 
 <script>
+  // ----------------------------------------
+  // SUPABASE CONFIG
+  // ----------------------------------------
+  const SUPABASE_URL = 'https://akttsoaukobrvxwgflfs.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrdHRzb2F1a29icnZ4d2dmbGZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzOTA1MzksImV4cCI6MjA5Mzk2NjUzOX0.179azq7t0qhesmR6J5mWxlH5Xrn9v3h8xSQo33s1zJM';
+  const TABLE_NAME = 'attendance';
+
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // ----------------------------------------
+  // rest of your code below...
+  // ----------------------------------------
+
+    
 // ══════════════════════════════════════════════════
 // DEFAULT SCHOOLS LIST
 // ══════════════════════════════════════════════════
@@ -1339,9 +1353,9 @@ function populateSchoolSelects(targetId=null,selected=null){
 // ─── SUPABASE CONFIG ───
 function loadSupaForm(){
   const cfg=getSupaConfig();
-  document.getElementById('sb-url').value=cfg.url||'';
-  document.getElementById('sb-key').value=cfg.key||'';
-  document.getElementById('sb-table').value=cfg.table||'attendance';
+    SUPABASE_URL
+    SUPABASE_KEY
+    TABLE_NAME
 }
 
 function saveSupaConfig(){
