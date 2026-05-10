@@ -766,16 +766,14 @@ function getAllRecords(){
 }
 function getRecordsForDate(date){return getAllRecords().filter(r=>r.date===date)}
 
-function initDefaults(){
-  if(!getUsers().length){
-    saveUsers([
-      {username:'admin',  password:'admin123',  role:'admin',   display:'Administrator',  school:null, createdAt:new Date().toISOString()},
-      {username:'teacher',password:'teacher123',role:'teacher', display:'Default Teacher', school:'SKA001',createdAt:new Date().toISOString()},
-      {username:'officer',password:'officer123',role:'officer', display:'District Officer',school:null, createdAt:new Date().toISOString()},
-    ]);
+async function initDefaults(){
+  // Only seed schools if localStorage is empty
+  // Users are seeded directly in Supabase, not here
+  if(!getSchools().length){
+    saveSchools(DEFAULT_SCHOOLS);
+    await saveSchoolsToSupabase(DEFAULT_SCHOOLS);
   }
 }
-
 // ══════════════════════════════════════════════════
 // SESSION
 // ══════════════════════════════════════════════════
@@ -863,10 +861,18 @@ function tTab(tab){
 
 // CLASS SETUP
 let setupRowCounter=0;
-function loadSetupRows(){
+async function loadSetupRows(){
   const code=CU._school?CU._school.code:null;
   if(!code)return;
-  const classes=getSetup(code)||[];
+
+  // Try Supabase first, fall back to localStorage
+  let classes = await loadSetupFromSupabase(code);
+  if(classes){
+    saveSetup2(code, classes); // cache locally
+  } else {
+    classes = getSetup(code) || [];
+  }
+
   document.getElementById('setup-rows').innerHTML='';
   setupRowCounter=0;
   if(classes.length){
@@ -891,7 +897,7 @@ function delSetupRow(id){
   if(list.children.length<=1){showToast('⚠ Need at least one class.');return}
   document.getElementById(id)?.remove();
 }
-function saveSetup(){
+async function saveSetup(){
   const code=CU._school?.code;
   const errEl=document.getElementById('setup-err');
   errEl.style.display='none';
@@ -906,8 +912,21 @@ function saveSetup(){
     classes.push({name,enrolled});
   });
   if(!ok)return;
+
+  // Save locally first (fast)
   saveSetup2(code,classes);
-  showToast('✓ Setup saved as default!');
+
+  // Then push to Supabase
+  const btn = document.querySelector('#tc-setup button');
+  if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
+  const result = await saveSetupToSupabase(code, classes);
+  if(btn){ btn.disabled=false; btn.textContent='💾 Save as Default'; }
+
+  if(result.ok){
+    showToast('✓ Setup saved to Supabase!');
+  } else {
+    showToast('⚠ Saved locally only — Supabase sync failed');
+  }
   loadAttendanceForm();
 }
 
@@ -1192,7 +1211,7 @@ function loadAdminUsers(){
   }).join('')||'<div class="empty" style="padding:24px"><h3>No users</h3></div>';
 }
 
-function addUser(){
+async function addUser(){
   const username=document.getElementById('au-user').value.trim().toLowerCase();
   const role=document.getElementById('au-role').value;
   const password=document.getElementById('au-pass').value;
@@ -1201,16 +1220,18 @@ function addUser(){
   const errEl=document.getElementById('au-err');
   errEl.style.display='none';
   if(!username){errEl.textContent='⚠ Username required.';errEl.style.display='flex';return}
-  if(!/^[a-z0-9_.-]+$/.test(username)){errEl.textContent='⚠ Invalid username (letters, numbers, _ . - only).';errEl.style.display='flex';return}
+  if(!/^[a-z0-9_.-]+$/.test(username)){errEl.textContent='⚠ Invalid username.';errEl.style.display='flex';return}
   if(!password||password.length<4){errEl.textContent='⚠ Password must be at least 4 characters.';errEl.style.display='flex';return}
   const users=getUsers();
   if(users.find(u=>u.username===username)){errEl.textContent='⚠ Username already taken.';errEl.style.display='flex';return}
   if(role==='teacher'&&school){
     const existing=users.find(u=>u.role==='teacher'&&u.school===school);
-    if(existing){errEl.textContent=`⚠ ${getSchools().find(s=>s.code===school)?.name||school} already has a teacher account (${existing.username}).`;errEl.style.display='flex';return}
+    if(existing){errEl.textContent=`⚠ School already has a teacher (${existing.username}).`;errEl.style.display='flex';return}
   }
-  users.push({username,password,role,display:display||username,school:role==='teacher'?school:null,createdAt:new Date().toISOString()});
-  saveUsers(users);
+  const newUser={username,password,role,display:display||username,school:role==='teacher'?school:null,createdAt:new Date().toISOString()};
+  users.push(newUser);
+  saveUsers(users); // localStorage
+  await saveUsersToSupabase(users); // Supabase
   ['au-user','au-pass','au-display'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('au-school').value='';
   loadAdminUsers();
@@ -1230,7 +1251,7 @@ function openEdit(username){
   document.getElementById('modal-edit').classList.add('open');
 }
 
-function saveEdit(){
+async function saveEdit(){
   const orig=document.getElementById('eu-orig').value;
   const username=document.getElementById('eu-user').value.trim().toLowerCase();
   const display=document.getElementById('eu-display').value.trim();
@@ -1247,16 +1268,19 @@ function saveEdit(){
     if(u.username!==orig)return u;
     return{...u,username,display:display||username,role,school:role==='teacher'?school:null,password:newPass||u.password};
   });
-  saveUsers(users);
+  saveUsers(users); // localStorage
+  await saveUsersToSupabase(users); // Supabase
   if(orig===CU.username){CU.username=username;CU.role=role;CU.display=display||username}
   closeModal('modal-edit');
   loadAdminUsers();
   showToast(`✓ User "${username}" updated`);
 }
 
-function deleteUser(username){
+async function deleteUser(username){
   if(!confirm(`Delete user "${username}"? This cannot be undone.`))return;
-  saveUsers(getUsers().filter(u=>u.username!==username));
+  const users = getUsers().filter(u=>u.username!==username);
+  saveUsers(users); // localStorage
+  await saveUsersToSupabase(users); // Supabase
   loadAdminUsers();
   showToast(`🗑 User "${username}" deleted`);
 }
@@ -1277,22 +1301,56 @@ function loadAdminSchools(){
     </div>`).join('')||'<div class="empty" style="padding:24px"><h3>No schools</h3></div>';
 }
 
-function addSchool(){
+async function addSchool(){
   const code=document.getElementById('sc-code').value.trim().toUpperCase();
   const name=document.getElementById('sc-name').value.trim();
-  const errEl=document.getElementById('sc-err');errEl.style.display='none';
+  const errEl=document.getElementById('sc-err');
+  errEl.style.display='none';
   if(!code||!name){errEl.textContent='⚠ Both code and name are required.';errEl.style.display='flex';return}
   const schools=getSchools();
   if(schools.find(s=>s.code===code)){errEl.textContent='⚠ School code already exists.';errEl.style.display='flex';return}
-  schools.push({code,name});saveSchools(schools);
-  document.getElementById('sc-code').value='';document.getElementById('sc-name').value='';
-  loadAdminSchools();populateSchoolSelects();showToast(`✓ School "${name}" added`);
+  schools.push({code,name});
+  saveSchools(schools); // localStorage
+  await saveSchoolsToSupabase(schools); // Supabase
+  document.getElementById('sc-code').value='';
+  document.getElementById('sc-name').value='';
+  loadAdminSchools();
+  populateSchoolSelects();
+  showToast(`✓ School "${name}" added`);
 }
 
-function deleteSchool(code){
-  if(!confirm(`Remove school ${code}?`))return;
-  saveSchools(getSchools().filter(s=>s.code!==code));
-  loadAdminSchools();populateSchoolSelects();showToast('🗑 School removed');
+async function deleteSchool(code){
+  if(!confirm(`Remove school ${code} and ALL its attendance records? This cannot be undone.`))return;
+
+  // Delete school
+  const schools = getSchools().filter(s=>s.code!==code);
+  saveSchools(schools); // localStorage
+  await saveSchoolsToSupabase(schools); // Supabase
+
+  // CASCADE: delete attendance records from localStorage
+  const keys=[];
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k&&k.startsWith(`sars_rec_${code}_`)) keys.push(k);
+  }
+  keys.forEach(k=>localStorage.removeItem(k));
+
+  // Delete class setup from localStorage + Supabase
+  localStorage.removeItem(`sars_setup_${code}`);
+  const cfg = getSupaConfig();
+  if(cfg.url && cfg.key){
+    fetch(`${cfg.url}/rest/v1/class_setup?school_code=eq.${code}`,{
+      method:'DELETE',
+      headers:{
+        'apikey': cfg.key,
+        'Authorization': 'Bearer ' + cfg.key,
+      }
+    });
+  }
+
+  loadAdminSchools();
+  populateSchoolSelects();
+  showToast(`🗑 School and ${keys.length} record(s) deleted`);
 }
 
 function populateSchoolSelects(targetId=null,selected=null){
@@ -1387,7 +1445,7 @@ async function testSupabase(){
 }
 
 // ══════════════════════════════════════════════════
-// SUPABASE PUSH
+// SUPABASE DATA PUSH
 // ══════════════════════════════════════════════════
 async function pushToSupabase(record){
   const cfg=getSupaConfig();
@@ -1420,7 +1478,42 @@ async function pushToSupabase(record){
     return{ok:false,error:`HTTP ${res.status}: ${body.slice(0,80)}`};
   }catch(e){return{ok:false,error:e.message}}
 }
-
+async function saveSetupToSupabase(code, classes) {
+  const cfg = getSupaConfig();
+  if (!cfg.url || !cfg.key) return { ok: false };
+  try {
+    const res = await fetch(`${cfg.url}/rest/v1/class_setup`, {
+      method: 'POST',
+      headers: {
+        'apikey': cfg.key,
+        'Authorization': 'Bearer ' + cfg.key,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates', // upsert by school_code
+      },
+      body: JSON.stringify({ school_code: code, classes, updated_at: new Date().toISOString() }),
+    });
+    return { ok: res.ok };
+  } catch(e) {
+    return { ok: false, error: e.message };
+  }
+}
+async function loadSetupFromSupabase(code) {
+  const cfg = getSupaConfig();
+  if (!cfg.url || !cfg.key) return null;
+  try {
+    const res = await fetch(`${cfg.url}/rest/v1/class_setup?school_code=eq.${code}&limit=1`, {
+      headers: {
+        'apikey': cfg.key,
+        'Authorization': 'Bearer ' + cfg.key,
+      }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data[0]?.classes || null;
+  } catch {
+    return null;
+  }
+}
 // ══════════════════════════════════════════════════
 // EXPORT / PRINT
 // ══════════════════════════════════════════════════
@@ -1471,6 +1564,93 @@ function clearCache(){
   keys.forEach(k=>localStorage.removeItem(k));
   showToast(`🗑 Cleared ${keys.length} record(s)`);
 }
+// ══════════════════════════════════════════════════
+// SCHOOL SETTINGS
+// ══════════════════════════════════════════════════
+async function getSchoolsFromSupabase(){
+  const cfg = getSupaConfig();
+  if(!cfg.url||!cfg.key) return null;
+  try{
+    const res = await fetch(`${cfg.url}/rest/v1/sars_schools`,{
+      headers:{
+        'apikey': cfg.key,
+        'Authorization': 'Bearer ' + cfg.key,
+      }
+    });
+    if(!res.ok) return null;
+    return await res.json();
+  } catch{ return null; }
+}
+
+async function saveSchoolsToSupabase(schools){
+  const cfg = getSupaConfig();
+  if(!cfg.url||!cfg.key) return {ok:false};
+  try{
+    await fetch(`${cfg.url}/rest/v1/sars_schools`,{
+      method:'DELETE',
+      headers:{
+        'apikey': cfg.key,
+        'Authorization': 'Bearer ' + cfg.key,
+        'Content-Type': 'application/json',
+      }
+    });
+    const res = await fetch(`${cfg.url}/rest/v1/sars_schools`,{
+      method:'POST',
+      headers:{
+        'apikey': cfg.key,
+        'Authorization': 'Bearer ' + cfg.key,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify(schools),
+    });
+    return {ok:res.ok};
+  } catch(e){ return {ok:false, error:e.message}; }
+}
+// ══════════════════════════════════════════════════
+// USER SETTINGS
+// ══════════════════════════════════════════════════
+async function getUsersFromSupabase(){
+  const cfg = getSupaConfig();
+  if(!cfg.url||!cfg.key) return null;
+  try{
+    const res = await fetch(`${cfg.url}/rest/v1/sars_users`,{
+      headers:{
+        'apikey': cfg.key,
+        'Authorization': 'Bearer ' + cfg.key,
+      }
+    });
+    if(!res.ok) return null;
+    return await res.json();
+  } catch{ return null; }
+}
+
+async function saveUsersToSupabase(users){
+  const cfg = getSupaConfig();
+  if(!cfg.url||!cfg.key) return {ok:false};
+  try{
+    // Delete all then reinsert (simplest approach)
+    await fetch(`${cfg.url}/rest/v1/sars_users`,{
+      method:'DELETE',
+      headers:{
+        'apikey': cfg.key,
+        'Authorization': 'Bearer ' + cfg.key,
+        'Content-Type': 'application/json',
+      }
+    });
+    const res = await fetch(`${cfg.url}/rest/v1/sars_users`,{
+      method:'POST',
+      headers:{
+        'apikey': cfg.key,
+        'Authorization': 'Bearer ' + cfg.key,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify(users),
+    });
+    return {ok:res.ok};
+  } catch(e){ return {ok:false, error:e.message}; }
+}
 
 // ══════════════════════════════════════════════════
 // UTILITIES
@@ -1492,14 +1672,27 @@ function genId(){return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=
 // ══════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded',()=>{
+document.addEventListener('DOMContentLoaded', async ()=>{
   initDefaults();
-  // ADD THIS BLOCK
+
+  // Sync from Supabase to localStorage on startup
+  const cfg = getSupaConfig();
+  if(cfg.url && cfg.key){
+    const remoteUsers = await getUsersFromSupabase();
+    if(remoteUsers && remoteUsers.length){
+      saveUsers(remoteUsers);
+    }
+    const remoteSchools = await getSchoolsFromSupabase();
+    if(remoteSchools && remoteSchools.length){
+      saveSchools(remoteSchools);
+    }
+  }
+
   const saved = localStorage.getItem('sars_session');
   if(saved){
     try{
       CU = JSON.parse(saved);
-      showLanding(); // skip login screen
+      showLanding();
     } catch{
       localStorage.removeItem('sars_session');
       showScreen('screen-login');
