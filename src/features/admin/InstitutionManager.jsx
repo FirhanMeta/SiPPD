@@ -51,12 +51,12 @@ const InstitutionManager = () => {
   };
 
   const fetchAll = async () => {
-    setLoading(true);
-    const [{ data: d }, { data: s }, { data: p }] = await Promise.all([
-      supabase.from('districts').select('*').order('name'),
-      supabase.from('schools').select('*, districts(name)').order('name'),
-      supabase.from('profiles').select('*, schools(name)').order('email'),
-    ]);
+  setLoading(true);
+  const [{ data: d }, { data: s }, { data: p }] = await Promise.all([
+    supabase.from('districts').select('*, states(name)').order('name'),  // ← updated
+    supabase.from('schools').select('*, districts(name)').order('name'),
+    supabase.from('profiles').select('*, schools(name)').order('email'),
+  ]);
     setDistricts(d ?? []);
     setSchools(s ?? []);
     setUsers(p ?? []);
