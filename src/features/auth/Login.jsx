@@ -49,3 +49,74 @@ const Login = () => {
 };
 
 export default Login;
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
+
+const Login = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    // 1. Sign in with Supabase Auth
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password,
+    });
+
+    if (error) {
+      alert(error.message);
+      setLoading(false);
+      return;
+    }
+
+    // 2. Fetch User Profile to determine where to redirect
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user.id)
+      .single();
+
+    // 3. Role-Based Redirection logic
+    if (profile?.role === 'superadmin') navigate('/admin/institusi');
+    else if (profile?.role === 'ppd') navigate('/ppd/dashboard');
+    else navigate('/attendance/report'); // Default for Guru
+
+    setLoading(false);
+  };
+
+  return (
+    // ... UI Structure from previous step
+    <form onSubmit={handleLogin} className="w-full max-w-sm space-y-4">
+      <input 
+        type="email" 
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="EMEL RASMI / USERNAME" 
+        className="w-full p-3 bg-transparent border border-gray-500 rounded text-sm focus:border-[#11a9bc] outline-none transition"
+        required
+      />
+      <input 
+        type="password" 
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="KATA LALUAN" 
+        className="w-full p-3 bg-transparent border border-gray-500 rounded text-sm focus:border-[#11a9bc] outline-none transition"
+        required
+      />
+      <button 
+        type="submit" 
+        disabled={loading}
+        className="w-full bg-[#11a9bc] hover:bg-[#0e8a9a] py-3 font-bold uppercase text-sm transition shadow-lg disabled:opacity-50"
+      >
+        {loading ? 'Sila Tunggu...' : 'Daftar Masuk'}
+      </button>
+    </form>
+    // ... Rest of UI
+  );
+};
