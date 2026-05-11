@@ -1298,8 +1298,8 @@ async function addUser() {
   const role = document.getElementById('au-role').value;
   const password = document.getElementById('au-pass').value;
   const display = document.getElementById('au-display').value.trim();
-  const schoolEl = document.getElementById('au-school');
-  const school = schoolEl ? schoolEl.value || null : null;
+  const schoolInput = document.querySelector('#au-school-custom input');
+  const school = schoolInput ? schoolInput.dataset.code || null : null;
   console.log('school value:', school);
   const errEl = document.getElementById('au-err');
   errEl.style.display = 'none';
@@ -1513,7 +1513,12 @@ function populateSchoolSelects(targetId=null, selected=null){
       const none = document.createElement('div');
       none.textContent='— Not applicable —';
       none.style.cssText='padding:10px 14px;cursor:pointer;color:#999;font-size:13px;';
-      none.onmousedown=()=>{ input.value=''; el.value=''; dropdown.style.display='none'; };
+      none.onmousedown=()=>{ 
+        input.value=''; 
+        input.dataset.code='';
+        el.value=''; 
+        dropdown.style.display='none'; 
+      };
       dropdown.appendChild(none);
 
       schools
@@ -1527,6 +1532,7 @@ function populateSchoolSelects(targetId=null, selected=null){
           opt.onmouseout=()=>opt.style.background= s.code===el.value?'#f0f7ff':'';
           opt.onmousedown=()=>{
             input.value=s.name;
+            input.dataset.code=s.code; // store code on input itself
             el.value=s.code;
             dropdown.style.display='none';
           };
