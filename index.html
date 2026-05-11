@@ -747,6 +747,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <script src="config.js"></script>
 <script>
 // ══════════════════════════════════════════════════
+// HASHPASSWORD  CONFIG 
+// ══════════════════════════════════════════════════
+async function hashPassword(password){
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+// ══════════════════════════════════════════════════
 // SUPABASE CONFIG 
 // ══════════════════════════════════════════════════
 function getSupaConfig(){
@@ -823,13 +834,16 @@ async function initDefaults(){
 // ══════════════════════════════════════════════════
 let CU = null;
 
-function doLogin(){
+async function doLogin(){
   const username=document.getElementById('l-user').value.trim();
   const password=document.getElementById('l-pass').value;
   const errEl=document.getElementById('l-err');
   errEl.style.display='none';
   if(!username||!password){errEl.textContent='⚠ Enter username and password.';errEl.style.display='block';return}
-  const user=getUsers().find(u=>u.username===username&&u.password===password);
+  
+  const hashed = await hashPassword(password); // ← hash entered password
+  const user=getUsers().find(u=>u.username===username&&u.password===hashed); // ← compare hash
+  
   if(!user){
     errEl.textContent='✕ Incorrect username or password.';errEl.style.display='block';
     document.getElementById('l-pass').classList.add('err');
@@ -837,7 +851,7 @@ function doLogin(){
     return;
   }
   CU={...user};
-  localStorage.setItem('sars_session', JSON.stringify(CU)); // ADD THIS
+  localStorage.setItem('sars_session', JSON.stringify(CU));
   showLanding();
 }
 function logout(){
@@ -1274,10 +1288,13 @@ async function addUser(){
     const existing=users.find(u=>u.role==='teacher'&&u.school===school);
     if(existing){errEl.textContent=`⚠ School already has a teacher (${existing.username}).`;errEl.style.display='flex';return}
   }
-  const newUser={username,password,role,display:display||username,school:role==='teacher'?school:null,createdAt:new Date().toISOString()};
+
+  const hashed = await hashPassword(password); // ← hash before saving
+
+  const newUser={username,password:hashed,role,display:display||username,school:role==='teacher'?school:null,createdAt:new Date().toISOString()};
   users.push(newUser);
-  saveUsers(users); // localStorage
-  await saveUsersToSupabase(users); // Supabase
+  saveUsers(users);
+  await saveUsersToSupabase(users);
   ['au-user','au-pass','au-display'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('au-school').value='';
   loadAdminUsers();
