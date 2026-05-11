@@ -1397,10 +1397,23 @@ async function saveEdit(){
 }
 
 async function deleteUser(username){
-  if(!confirm(`Delete user "${username}"? This cannot be undone.`))return;
-  const users = getUsers().filter(u=>u.username!==username);
-  saveUsers(users); // localStorage
-  await saveUsersToSupabase(users); // Supabase
+  if(!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
+
+  const cfg = getSupaConfig();
+  if(cfg.url && cfg.key){
+    await fetch(`${cfg.url}/rest/v1/sars_users?username=eq.${username}`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': cfg.key,
+        'Authorization': 'Bearer ' + cfg.key,
+      }
+    });
+  }
+
+  // localStorage
+  const users = getUsers().filter(u => u.username !== username);
+  saveUsers(users);
+
   loadAdminUsers();
   showToast(`🗑 User "${username}" deleted`);
 }
