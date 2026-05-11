@@ -835,24 +835,52 @@ async function initDefaults(){
 let CU = null;
 
 async function doLogin(){
-  const username=document.getElementById('l-user').value.trim();
-  const password=document.getElementById('l-pass').value;
-  const errEl=document.getElementById('l-err');
-  errEl.style.display='none';
-  if(!username||!password){errEl.textContent='⚠ Enter username and password.';errEl.style.display='block';return}
+  const username = document.getElementById('l-user').value.trim();
+  const password = document.getElementById('l-pass').value;
+  const errEl = document.getElementById('l-err');
+  errEl.style.display = 'none';
   
-  const hashed = await hashPassword(password); // ← hash entered password
-  const user=getUsers().find(u=>u.username===username&&u.password===hashed); // ← compare hash
-  
-  if(!user){
-    errEl.textContent='✕ Incorrect username or password.';errEl.style.display='block';
-    document.getElementById('l-pass').classList.add('err');
-    setTimeout(()=>document.getElementById('l-pass').classList.remove('err'),1200);
+  if(!username || !password){
+    errEl.textContent = '⚠ Enter username and password.';
+    errEl.style.display = 'block';
     return;
   }
-  CU={...user};
-  localStorage.setItem('sars_session', JSON.stringify(CU));
-  showLanding();
+  
+  try {
+    const { data, error } = await supabaseClient
+      .from('sars_users')
+      .select('*')
+      .eq('username', username)
+      .single();
+    
+    if(error || !data){
+      errEl.textContent = '✕ Incorrect username or password.';
+      errEl.style.display = 'block';
+      document.getElementById('l-pass').classList.add('err');
+      setTimeout(()=>document.getElementById('l-pass').classList.remove('err'), 1200);
+      return;
+    }
+    
+    // Compare hashed password
+    const hashed = await hashPassword(password);
+    if(data.password !== hashed){
+      errEl.textContent = '✕ Incorrect username or password.';
+      errEl.style.display = 'block';
+      document.getElementById('l-pass').classList.add('err');
+      setTimeout(()=>document.getElementById('l-pass').classList.remove('err'), 1200);
+      return;
+    }
+    
+    // Login successful
+    CU = {...data};
+    localStorage.setItem('sars_session', JSON.stringify(CU));
+    showLanding();
+    
+  } catch(err){
+    console.error('Login error:', err);
+    errEl.textContent = '✕ Server error. Try again.';
+    errEl.style.display = 'block';
+  }
 }
 function logout(){
   CU=null;
