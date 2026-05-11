@@ -1459,28 +1459,39 @@ async function addSchool(){
 }
 
 async function deleteSchool(code){
-  if(!confirm(`Remove school ${code} and ALL its attendance records? This cannot be undone.`))return;
+  if(!confirm(`Remove school ${code} and ALL its attendance records? This cannot be undone.`)) return;
 
-  // Delete school
-  const schools = getSchools().filter(s=>s.code!==code);
-  saveSchools(schools); // localStorage
-  await saveSchoolsToSupabase(schools); // Supabase
+  const cfg = getSupaConfig();
+
+  // ✅ DELETE only this specific school by code (with filter)
+  if(cfg.url && cfg.key){
+    await fetch(`${cfg.url}/rest/v1/sars_schools?code=eq.${code}`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': cfg.key,
+        'Authorization': 'Bearer ' + cfg.key,
+      }
+    });
+  }
+
+  // Update localStorage
+  const schools = getSchools().filter(s => s.code !== code);
+  saveSchools(schools);
 
   // CASCADE: delete attendance records from localStorage
-  const keys=[];
-  for(let i=0;i<localStorage.length;i++){
-    const k=localStorage.key(i);
-    if(k&&k.startsWith(`sars_rec_${code}_`)) keys.push(k);
+  const keys = [];
+  for(let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if(k && k.startsWith(`sars_rec_${code}_`)) keys.push(k);
   }
-  keys.forEach(k=>localStorage.removeItem(k));
+  keys.forEach(k => localStorage.removeItem(k));
 
   // Delete class setup from localStorage + Supabase
   localStorage.removeItem(`sars_setup_${code}`);
-  const cfg = getSupaConfig();
   if(cfg.url && cfg.key){
-    fetch(`${cfg.url}/rest/v1/class_setup?school_code=eq.${code}`,{
-      method:'DELETE',
-      headers:{
+    fetch(`${cfg.url}/rest/v1/class_setup?school_code=eq.${code}`, {
+      method: 'DELETE',
+      headers: {
         'apikey': cfg.key,
         'Authorization': 'Bearer ' + cfg.key,
       }
@@ -1963,28 +1974,20 @@ async function getSchoolsFromSupabase(){
 
 async function saveSchoolsToSupabase(schools){
   const cfg = getSupaConfig();
-  if(!cfg.url||!cfg.key) return {ok:false};
+  if(!cfg.url || !cfg.key) return {ok: false};
   try{
-    await fetch(`${cfg.url}/rest/v1/sars_schools`,{
-      method:'DELETE',
-      headers:{
+    const res = await fetch(`${cfg.url}/rest/v1/sars_schools`, {
+      method: 'POST',
+      headers: {
         'apikey': cfg.key,
         'Authorization': 'Bearer ' + cfg.key,
         'Content-Type': 'application/json',
-      }
-    });
-    const res = await fetch(`${cfg.url}/rest/v1/sars_schools`,{
-      method:'POST',
-      headers:{
-        'apikey': cfg.key,
-        'Authorization': 'Bearer ' + cfg.key,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates',
+        'Prefer': 'resolution=merge-duplicates', // ✅ upsert, never mass-delete
       },
       body: JSON.stringify(schools),
     });
-    return {ok:res.ok};
-  } catch(e){ return {ok:false, error:e.message}; }
+    return {ok: res.ok};
+  } catch(e){ return {ok: false, error: e.message}; }
 }
 // ══════════════════════════════════════════════════
 // USER SETTINGS
