@@ -35,8 +35,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .screen.active{display:flex;flex-direction:column}
 
 #screen-login{
-  background:linear-gradient(150deg,#0D2137 0%,#0a3055 50%,#0d4a6b 100%);
+  background:linear-gradient(150deg, #0D2137 0%, #0a3055 50%, #0d4a6b 100%);
   align-items:center;justify-content:center;padding:24px 20px;
+}
+
+#land-cards {
+  justify-content: center;
 }
 .login-wrap{width:100%;max-width:380px}
 .login-logo{
@@ -574,6 +578,27 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="card ai">
       <div class="card-hd"><div class="c-icon" style="background:#EBF2FA">➕</div><h3>Add School</h3></div>
       <div class="card-body">
+
+        <!-- JPN ROW -->
+        <div class="frow">
+          <div class="fg" style="position:relative">
+            <label class="flabel">JPN <span>*</span></label>
+            <input type="text" id="sc-jpn-search" class="fc" placeholder="Search JPN…"
+              onfocus="showJPNOptions()" oninput="filterJPNOptions()" onblur="setTimeout(()=>hideDropdown('sc-jpn-opts'),150)">
+            <input type="hidden" id="sc-jpn">
+            <div id="sc-jpn-opts" style="position:absolute;z-index:999;background:#fff;border:1px solid #ddd;border-radius:8px;width:100%;max-height:200px;overflow-y:auto;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+          </div>
+          <!-- PPD ROW -->
+          <div class="fg" style="position:relative">
+            <label class="flabel">PPD <span>*</span></label>
+            <input type="text" id="sc-ppd-search" class="fc" placeholder="Select JPN first…"
+              onfocus="showPPDOptions()" oninput="filterPPDOptions()" onblur="setTimeout(()=>hideDropdown('sc-ppd-opts'),150)" disabled>
+            <input type="hidden" id="sc-ppd">
+            <div id="sc-ppd-opts" style="position:absolute;z-index:999;background:#fff;border:1px solid #ddd;border-radius:8px;width:100%;max-height:200px;overflow-y:auto;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+          </div>
+        </div>
+
+        <!-- EXISTING: School Code + Name -->
         <div class="frow">
           <div class="fg"><label class="flabel">School Code <span>*</span></label><input type="text" class="fc" id="sc-code" placeholder="e.g. SKA016" autocapitalize="characters"></div>
           <div class="fg"><label class="flabel">School Name <span>*</span></label><input type="text" class="fc" id="sc-name" placeholder="e.g. SK Penampang"></div>
@@ -1171,7 +1196,11 @@ function closeDrill(){document.getElementById('off-drill').style.display='none'}
 // ADMIN
 // ══════════════════════════════════════════════════
 function openAdmin(){
-  loadAdminUsers();loadAdminSchools();loadSupaForm();
+  loadAdminUsers();
+  loadAdminSchools();
+  loadSupaForm();
+  populateJPNSelects();
+  populateSchoolSelects();
   aTab('users');
   showScreen('screen-admin');
 }
@@ -1304,16 +1333,22 @@ function loadAdminSchools(){
 async function addSchool(){
   const code=document.getElementById('sc-code').value.trim().toUpperCase();
   const name=document.getElementById('sc-name').value.trim();
+  const jpn_code=document.getElementById('sc-jpn').value;
+  const ppd_code=document.getElementById('sc-ppd').value;
   const errEl=document.getElementById('sc-err');
   errEl.style.display='none';
-  if(!code||!name){errEl.textContent='⚠ Both code and name are required.';errEl.style.display='flex';return}
+  if(!code||!name){errEl.textContent='⚠ Code and name are required.';errEl.style.display='flex';return}
+  if(!jpn_code){errEl.textContent='⚠ Please select a JPN.';errEl.style.display='flex';return}
+  if(!ppd_code){errEl.textContent='⚠ Please select a PPD.';errEl.style.display='flex';return}
   const schools=getSchools();
   if(schools.find(s=>s.code===code)){errEl.textContent='⚠ School code already exists.';errEl.style.display='flex';return}
-  schools.push({code,name});
-  saveSchools(schools); // localStorage
-  await saveSchoolsToSupabase(schools); // Supabase
+  schools.push({code,name,jpn_code,ppd_code});
+  saveSchools(schools);
+  await saveSchoolsToSupabase(schools);
   document.getElementById('sc-code').value='';
   document.getElementById('sc-name').value='';
+  document.getElementById('sc-jpn').value='';
+  document.getElementById('sc-ppd').innerHTML='<option value="">— Select PPD —</option>';
   loadAdminSchools();
   populateSchoolSelects();
   showToast(`✓ School "${name}" added`);
@@ -1353,16 +1388,186 @@ async function deleteSchool(code){
   showToast(`🗑 School and ${keys.length} record(s) deleted`);
 }
 
-function populateSchoolSelects(targetId=null,selected=null){
+function populateSchoolSelects(targetId=null, selected=null){
   const schools=getSchools();
-  const opt=(sel='')=>`<option value="">— Not applicable —</option>`+schools.map(s=>`<option value="${s.code}"${s.code===sel?' selected':''}>${esc(s.name)}</option>`).join('');
+  
+  const buildSelect = (elId, sel='') => {
+    const el = document.getElementById(elId);
+    if(!el) return;
+    
+    // Replace <select> with a searchable dropdown
+    el.style.display='none';
+    
+    // Remove old custom dropdown if exists
+    const oldDrop = document.getElementById(elId+'-custom');
+    if(oldDrop) oldDrop.remove();
+
+    const wrapper = document.createElement('div');
+    wrapper.id = elId+'-custom';
+    wrapper.style.cssText='position:relative;';
+
+    const input = document.createElement('input');
+    input.type='text';
+    input.placeholder='Search school…';
+    input.value=sel?schools.find(s=>s.code===sel)?.name||'':'';
+    input.style.cssText='width:100%;box-sizing:border-box;';
+    input.className='form-input'; // use your existing input style
+
+    const dropdown = document.createElement('div');
+    dropdown.style.cssText='position:absolute;z-index:999;background:#fff;border:1px solid #ddd;border-radius:8px;width:100%;max-height:200px;overflow-y:auto;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1);';
+
+    const renderOptions = (filter='') => {
+      dropdown.innerHTML='';
+      // Not applicable option
+      const none = document.createElement('div');
+      none.textContent='— Not applicable —';
+      none.style.cssText='padding:10px 14px;cursor:pointer;color:#999;font-size:13px;';
+      none.onmousedown=()=>{ input.value=''; el.value=''; dropdown.style.display='none'; };
+      dropdown.appendChild(none);
+
+      schools
+        .filter(s=>s.name.toLowerCase().includes(filter.toLowerCase())||s.code.toLowerCase().includes(filter.toLowerCase()))
+        .forEach(s=>{
+          const opt = document.createElement('div');
+          opt.textContent=`${s.name}`;
+          opt.style.cssText='padding:10px 14px;cursor:pointer;font-size:13px;';
+          opt.style.background= s.code===el.value?'#f0f7ff':'';
+          opt.onmouseover=()=>opt.style.background='#f5f5f5';
+          opt.onmouseout=()=>opt.style.background= s.code===el.value?'#f0f7ff':'';
+          opt.onmousedown=()=>{
+            input.value=s.name;
+            el.value=s.code;
+            dropdown.style.display='none';
+          };
+          dropdown.appendChild(opt);
+        });
+    };
+
+    input.onfocus=()=>{ renderOptions(input.value); dropdown.style.display='block'; };
+    input.oninput=()=>{ renderOptions(input.value); dropdown.style.display='block'; el.value=''; };
+    input.onblur=()=>{ setTimeout(()=>dropdown.style.display='none', 150); };
+
+    // Set initial value
+    if(sel) el.value=sel;
+
+    wrapper.appendChild(input);
+    wrapper.appendChild(dropdown);
+    el.parentNode.insertBefore(wrapper, el.nextSibling);
+  };
+
   if(targetId){
-    document.getElementById(targetId).innerHTML=opt(selected||'');
+    buildSelect(targetId, selected||'');
   } else {
-    ['au-school','eu-school'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opt()});
+    ['au-school','eu-school'].forEach(id=>buildSelect(id));
   }
 }
+// ══════════════════════════════════════════════════
+// JPN / PPD SEARCHABLE DROPDOWNS
+// ══════════════════════════════════════════════════
+function hideDropdown(id){
+  const el=document.getElementById(id);
+  if(el) el.style.display='none';
+}
 
+function showJPNOptions(){
+  const input=document.getElementById('sc-jpn-search').value;
+  filterJPNOptions(input);
+}
+
+function filterJPNOptions(){
+  const filter=document.getElementById('sc-jpn-search').value.toLowerCase();
+  const opts=document.getElementById('sc-jpn-opts');
+  const jpnList=getJPN();
+  opts.style.display='block';
+  opts.innerHTML=jpnList
+    .filter(j=>j.name.toLowerCase().includes(filter)||j.code.toLowerCase().includes(filter))
+    .map(j=>`
+      <div style="padding:10px 14px;cursor:pointer;font-size:13px;"
+        onmouseover="this.style.background='#f5f5f5'" 
+        onmouseout="this.style.background=''"
+        onmousedown="selectJPN('${j.code}','${esc(j.name)}')">
+        ${esc(j.name)}
+      </div>`).join('')||'<div style="padding:10px 14px;color:#999;font-size:13px">No results</div>';
+}
+
+function selectJPN(code, name){
+  document.getElementById('sc-jpn').value=code;
+  document.getElementById('sc-jpn-search').value=name;
+  document.getElementById('sc-jpn-opts').style.display='none';
+  // Enable PPD and reset it
+  const ppdSearch=document.getElementById('sc-ppd-search');
+  ppdSearch.disabled=false;
+  ppdSearch.placeholder='Search PPD…';
+  ppdSearch.value='';
+  document.getElementById('sc-ppd').value='';
+}
+
+function showPPDOptions(){
+  const jpnCode=document.getElementById('sc-jpn').value;
+  if(!jpnCode) return;
+  filterPPDOptions();
+}
+
+function filterPPDOptions(){
+  const jpnCode=document.getElementById('sc-jpn').value;
+  if(!jpnCode) return;
+  const filter=document.getElementById('sc-ppd-search').value.toLowerCase();
+  const opts=document.getElementById('sc-ppd-opts');
+  const ppdList=getPPD().filter(p=>p.jpn_code===jpnCode);
+  opts.style.display='block';
+  opts.innerHTML=ppdList
+    .filter(p=>p.name.toLowerCase().includes(filter)||p.code.toLowerCase().includes(filter))
+    .map(p=>`
+      <div style="padding:10px 14px;cursor:pointer;font-size:13px;"
+        onmouseover="this.style.background='#f5f5f5'"
+        onmouseout="this.style.background=''"
+        onmousedown="selectPPD('${p.code}','${esc(p.name)}')">
+        ${esc(p.name)}
+      </div>`).join('')||'<div style="padding:10px 14px;color:#999;font-size:13px">No PPD found</div>';
+}
+
+function selectPPD(code, name){
+  document.getElementById('sc-ppd').value=code;
+  document.getElementById('sc-ppd-search').value=name;
+  document.getElementById('sc-ppd-opts').style.display='none';
+}
+
+function populateJPNSelects(){
+  // Just ensures JPN data is loaded — dropdowns are search-based
+  const jpnList=getJPN();
+  if(!jpnList.length) showToast('⚠ No JPN data found');
+}
+// ══════════════════════════════════════════════════
+// JPN & PPD HELPERS
+// ══════════════════════════════════════════════════
+function getJPN(){return S.get('sars_jpn',[])}
+function saveJPN(j){S.set('sars_jpn',j)}
+function getPPD(){return S.get('sars_ppd',[])}
+function savePPD(p){S.set('sars_ppd',p)}
+
+async function getJPNFromSupabase(){
+  const cfg=getSupaConfig();
+  if(!cfg.url||!cfg.key) return null;
+  try{
+    const res=await fetch(`${cfg.url}/rest/v1/sars_jpn?order=name`,{
+      headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key}
+    });
+    if(!res.ok) return null;
+    return await res.json();
+  } catch{ return null; }
+}
+
+async function getPPDFromSupabase(){
+  const cfg=getSupaConfig();
+  if(!cfg.url||!cfg.key) return null;
+  try{
+    const res=await fetch(`${cfg.url}/rest/v1/sars_ppd?order=name`,{
+      headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key}
+    });
+    if(!res.ok) return null;
+    return await res.json();
+  } catch{ return null; }
+}
 // ══════════════════════════════════════════════════
 // BUG FIX 1: loadSupaForm now correctly reads from getSupaConfig()
 // instead of referencing undefined variables SUPABASE_URL/SUPABASE_KEY/TABLE_NAME
@@ -1387,7 +1592,71 @@ function saveSupaConfig(){
   okEl.style.display='flex';
   showToast('✓ Supabase config saved');
 }
+// ══════════════════════════════════════════════════
+// JPN & PPD HELPERS
+// ══════════════════════════════════════════════════
+function getJPN(){return S.get('sars_jpn',[])}
+function saveJPN(j){S.set('sars_jpn',j)}
+function getPPD(){return S.get('sars_ppd',[])}
+function savePPD(p){S.set('sars_ppd',p)}
 
+async function getJPNFromSupabase(){
+  const cfg=getSupaConfig();
+  if(!cfg.url||!cfg.key) return null;
+  try{
+    const res=await fetch(`${cfg.url}/rest/v1/sars_jpn?order=name`,{
+      headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key}
+    });
+    if(!res.ok) return null;
+    return await res.json();
+  } catch{ return null; }
+}
+
+async function getPPDFromSupabase(){
+  const cfg=getSupaConfig();
+  if(!cfg.url||!cfg.key) return null;
+  try{
+    const res=await fetch(`${cfg.url}/rest/v1/sars_ppd?order=name`,{
+      headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key}
+    });
+    if(!res.ok) return null;
+    return await res.json();
+  } catch{ return null; }
+}
+
+// ══════════════════════════════════════════════════
+// CLASS SETUP SUPABASE
+// ══════════════════════════════════════════════════
+async function saveSetupToSupabase(code, classes){
+  const cfg=getSupaConfig();
+  if(!cfg.url||!cfg.key) return {ok:false};
+  try{
+    const res=await fetch(`${cfg.url}/rest/v1/class_setup`,{
+      method:'POST',
+      headers:{
+        'apikey':cfg.key,
+        'Authorization':'Bearer '+cfg.key,
+        'Content-Type':'application/json',
+        'Prefer':'resolution=merge-duplicates',
+      },
+      body:JSON.stringify({school_code:code,classes,updated_at:new Date().toISOString()}),
+    });
+    return {ok:res.ok};
+  } catch(e){ return {ok:false,error:e.message}; }
+}
+
+async function loadSetupFromSupabase(code){
+  const cfg=getSupaConfig();
+  if(!cfg.url||!cfg.key) return null;
+  try{
+    const res=await fetch(`${cfg.url}/rest/v1/class_setup?school_code=eq.${code}&limit=1`,{
+      headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key}
+    });
+    if(!res.ok) return null;
+    const data=await res.json();
+    return data[0]?.classes||null;
+  } catch{ return null; }
+}
 // ══════════════════════════════════════════════════
 // BUG FIX 2: testSupabase now reads LIVE input values from the form fields
 // so you can test before/without saving, and unsaved changes are also tested
@@ -1675,17 +1944,19 @@ function genId(){return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=
 document.addEventListener('DOMContentLoaded', async ()=>{
   initDefaults();
 
-  // Sync from Supabase to localStorage on startup
   const cfg = getSupaConfig();
   if(cfg.url && cfg.key){
     const remoteUsers = await getUsersFromSupabase();
-    if(remoteUsers && remoteUsers.length){
-      saveUsers(remoteUsers);
-    }
+    if(remoteUsers && remoteUsers.length) saveUsers(remoteUsers);
+
     const remoteSchools = await getSchoolsFromSupabase();
-    if(remoteSchools && remoteSchools.length){
-      saveSchools(remoteSchools);
-    }
+    if(remoteSchools && remoteSchools.length) saveSchools(remoteSchools);
+
+    const remoteJPN = await getJPNFromSupabase();
+    if(remoteJPN && remoteJPN.length) saveJPN(remoteJPN);
+
+    const remotePPD = await getPPDFromSupabase();
+    if(remotePPD && remotePPD.length) savePPD(remotePPD);
   }
 
   const saved = localStorage.getItem('sars_session');
