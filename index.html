@@ -1293,34 +1293,68 @@ function loadAdminUsers(){
   }).join('')||'<div class="empty" style="padding:24px"><h3>No users</h3></div>';
 }
 
-async function addUser(){
-  const username=document.getElementById('au-user').value.trim().toLowerCase();
-  const role=document.getElementById('au-role').value;
-  const password=document.getElementById('au-pass').value;
-  const display=document.getElementById('au-display').value.trim();
-  const school=document.getElementById('au-school').value||null;
-  const errEl=document.getElementById('au-err');
-  errEl.style.display='none';
-  if(!username){errEl.textContent='⚠ Username required.';errEl.style.display='flex';return}
-  if(!/^[a-z0-9_.-]+$/.test(username)){errEl.textContent='⚠ Invalid username.';errEl.style.display='flex';return}
-  if(!password||password.length<4){errEl.textContent='⚠ Password must be at least 4 characters.';errEl.style.display='flex';return}
-  const users=getUsers();
-  if(users.find(u=>u.username===username)){errEl.textContent='⚠ Username already taken.';errEl.style.display='flex';return}
-  if(role==='teacher'&&school){
-    const existing=users.find(u=>u.role==='teacher'&&u.school===school);
-    if(existing){errEl.textContent=`⚠ School already has a teacher (${existing.username}).`;errEl.style.display='flex';return}
+async function addUser() {
+  const username = document.getElementById('au-user').value.trim().toLowerCase();
+  const role = document.getElementById('au-role').value;
+  const password = document.getElementById('au-pass').value;
+  const display = document.getElementById('au-display').value.trim();
+  const school = document.getElementById('au-school').value || null;
+  const errEl = document.getElementById('au-err');
+  errEl.style.display = 'none';
+
+  if (!username) { errEl.textContent = '⚠ Username required.'; errEl.style.display = 'flex'; return; }
+  if (!/^[a-z0-9_.-]+$/.test(username)) { errEl.textContent = '⚠ Invalid username.'; errEl.style.display = 'flex'; return; }
+  if (!password || password.length < 4) { errEl.textContent = '⚠ Password must be at least 4 characters.'; errEl.style.display = 'flex'; return; }
+
+  const users = getUsers();
+  if (users.find(u => u.username === username)) { errEl.textContent = '⚠ Username already taken.'; errEl.style.display = 'flex'; return; }
+  if (role === 'teacher' && school) {
+    const existing = users.find(u => u.role === 'teacher' && u.school === school);
+    if (existing) { errEl.textContent = `⚠ School already has a teacher (${existing.username}).`; errEl.style.display = 'flex'; return; }
   }
 
-  const hashed = await hashPassword(password); // ← hash before saving
+  const hashed = await hashPassword(password);
+  const newUser = {
+    username,
+    password: hashed,
+    role,
+    display: display || username,
+    school: role === 'teacher' ? school : null,
+    createdAt: new Date().toISOString()
+  };
 
-  const newUser={username,password:hashed,role,display:display||username,school:role==='teacher'?school:null,createdAt:new Date().toISOString()};
+  // Save to Supabase via API
+  const result = await saveUserToSupabase(newUser);
+  if (!result.ok) {
+    errEl.textContent = `⚠ Failed to save: ${result.error}`;
+    errEl.style.display = 'flex';
+    return;
+  }
+
+  // Only update local cache after Supabase succeeds
   users.push(newUser);
   saveUsers(users);
-  await saveUsersToSupabase(users);
-  ['au-user','au-pass','au-display'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('au-school').value='';
+
+  ['au-user', 'au-pass', 'au-display'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('au-school').value = '';
   loadAdminUsers();
   showToast(`✓ User "${username}" created`);
+}
+
+// NEW: inserts single user via API
+async function saveUserToSupabase(user) {
+  try {
+    const res = await fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(user)
+    });
+    const data = await res.json();
+    if (!res.ok) return { ok: false, error: data.error || 'Unknown error' };
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
 }
 
 function openEdit(username){

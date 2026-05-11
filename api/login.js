@@ -3,10 +3,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { username, password } = req.body;
+  const { username, password, role, display, school, createdAt } = req.body;
 
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password required' });
+  if (!username || !password || !role) {
+    return res.status(400).json({ error: 'Missing required fields' });
   }
 
   try {
@@ -16,30 +16,37 @@ export default async function handler(req, res) {
       process.env.SUPABASE_ANON_KEY
     );
 
-    const { data, error } = await supabase
+    // Check for duplicate username
+    const { data: existing } = await supabase
       .from('sars_users')
-      .select('*')
+      .select('username')
       .eq('username', username)
       .single();
 
-    if (error || !data) {
-      return res.status(401).json({ error: 'Incorrect username or password.' });
+    if (existing) {
+      return res.status(409).json({ error: 'Username already exists' });
     }
 
-    // Compare plain text passwords (NOT SECURE - temporary only!)
-    if (data.password !== password) {
-      return res.status(401).json({ error: 'Incorrect username or password.' });
+    // Insert new user
+    const { error } = await supabase
+      .from('sars_users')
+      .insert([{
+        username,
+        password,
+        role,
+        display: display || username,
+        school: role === 'teacher' ? school : null,
+        created_at: createdAt || new Date().toISOString()
+      }]);
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
     }
 
-    // Login successful - return user without password
-    const { password: _, ...userWithoutPassword } = data;
-    return res.status(200).json({ 
-      success: true,
-      user: userWithoutPassword 
-    });
+    return res.status(201).json({ success: true });
 
   } catch (err) {
-    console.error('Login API error:', err);
+    console.error('Users API error:', err);
     return res.status(500).json({ error: 'Server error. Try again.' });
   }
 }
