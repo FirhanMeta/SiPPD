@@ -1298,7 +1298,9 @@ async function addUser() {
   const role = document.getElementById('au-role').value;
   const password = document.getElementById('au-pass').value;
   const display = document.getElementById('au-display').value.trim();
-  const school = document.getElementById('au-school').value || null;
+  const schoolEl = document.getElementById('au-school');
+  const school = schoolEl ? schoolEl.value || null : null;
+  console.log('school value:', school);
   const errEl = document.getElementById('au-err');
   errEl.style.display = 'none';
 
