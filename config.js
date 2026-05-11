@@ -1,4 +1,8 @@
 // config.js
-const SUPA_URL   = 'https://akttsoaukobrvxwgflfs.supabase.co';
-const SUPA_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrdHRzb2F1a29icnZ4d2dmbGZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzOTA1MzksImV4cCI6MjA5Mzk2NjUzOX0.179azq7t0qhesmR6J5mWxlH5Xrn9v3h8xSQo33s1zJM';
+window.config = {
+  url: 'https://akttsoaukobrvxwglfs.supabase.co',
+  key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrdHRzb2F1a29icnZ4d2dsZnMiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTY2ZXZSb2xlIjoiYW5vbiIsImlhdCI6MTY2ZXZSb2xlIjoiYW5vbiIsImlhdCI6MTY0ZXZSb2xlIjoiYW5vbmlhdCI6MTY0ZXZSb2xlIjoiYW5vbmlhdCI6MTY0ZXZSb2xlIjoiYW5vbiIsImlhdCI6MTY0ZXZSb2xlIjoiYW5vbmlhdCI6MTY0ZXZSb2xlIjoiYW5vbiIsIm...'
+};
+
+// Keep the table name as a constant if needed
 const SUPA_TABLE = 'attendance';
