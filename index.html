@@ -855,24 +855,17 @@ async function doLogin(){
   }
   
   try {
-    const { data, error } = await supabaseClient
-      .from('sars_users')
-      .select('*')
-      .eq('username', username)
-      .single();
+    // Call your Vercel API instead of Supabase directly
+    const response = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
     
-    if(error || !data){
-      errEl.textContent = '✕ Incorrect username or password.';
-      errEl.style.display = 'block';
-      document.getElementById('l-pass').classList.add('err');
-      setTimeout(()=>document.getElementById('l-pass').classList.remove('err'), 1200);
-      return;
-    }
+    const result = await response.json();
     
-    // Compare hashed password
-    const hashed = await hashPassword(password);
-    if(data.password !== hashed){
-      errEl.textContent = '✕ Incorrect username or password.';
+    if (!response.ok || !result.success) {
+      errEl.textContent = '✕ ' + (result.error || 'Login failed');
       errEl.style.display = 'block';
       document.getElementById('l-pass').classList.add('err');
       setTimeout(()=>document.getElementById('l-pass').classList.remove('err'), 1200);
@@ -880,13 +873,13 @@ async function doLogin(){
     }
     
     // Login successful
-    CU = {...data};
+    CU = result.user;
     localStorage.setItem('sars_session', JSON.stringify(CU));
     showLanding();
     
   } catch(err){
     console.error('Login error:', err);
-    errEl.textContent = '✕ Server error. Try again.';
+    errEl.textContent = '✕ Network error. Try again.';
     errEl.style.display = 'block';
   }
 }
