@@ -162,12 +162,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .land-logo{width:72px;height:72px;border-radius:20px;background:rgba(255,255,255,.1);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;margin:0 auto 22px;font-size:32px}
 .landing h1{font-family:'Playfair Display',serif;font-size:26px;color:#fff;line-height:1.2;margin-bottom:6px}
 .landing .sub{color:rgba(255,255,255,.45);font-size:13px;margin-bottom:36px}
-.role-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:380px;margin-bottom:20px}
+.role-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:380px;margin-bottom:20px;justify-items: center;}
+.role-cards.single {
+  grid-template-columns: 1fr;
+  max-width: 200px;
+}
 .role-card{background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.14);border-radius:var(--r);padding:20px 12px;cursor:pointer;transition:all .25s;text-align:center;color:#fff}
 .role-card:hover{background:rgba(255,255,255,.17);border-color:rgba(255,255,255,.38);transform:translateY(-2px)}
 .rc-icon{font-size:28px;margin-bottom:10px}
 .role-card h3{font-size:14px;font-weight:700;margin-bottom:4px}
 .role-card p{font-size:11px;color:rgba(255,255,255,.45);line-height:1.4}
+.role-cards.single {
+  grid-template-columns: 1fr;
+  max-width: 200px;
+}
 
 .cs-row{display:grid;grid-template-columns:1fr 90px 34px;gap:8px;align-items:center;margin-bottom:8px;background:var(--lite);border-radius:var(--rs);padding:8px 10px}
 .cs-row input{width:100%;padding:8px 10px;border:1.5px solid var(--bdr);border-radius:6px;font-family:var(--font);font-size:13px;background:var(--surf)}
@@ -736,8 +744,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 </div>
 
 <div id="toast"></div>
-
+<script src="config.js"></script>
 <script>
+// ══════════════════════════════════════════════════
+// SUPABASE CONFIG 
+// ══════════════════════════════════════════════════
+function getSupaConfig(){
+        const saved = S.get('sars_supa', {});
+        return {
+          url:   saved.url   || SUPA_URL,    // ← from config.js
+          key:   saved.key   || SUPA_KEY,    // ← from config.js
+          table: saved.table || SUPA_TABLE   // ← from config.js
+        };
+      }
 // ══════════════════════════════════════════════════
 // DEFAULT SCHOOLS LIST
 // ══════════════════════════════════════════════════
@@ -847,6 +866,9 @@ function showLanding(){
   if(CU.role==='admin')
     html+=`<div class="role-card" onclick="openAdmin()" style="grid-column:span 2;background:rgba(240,165,0,.1);border-color:rgba(240,165,0,.25)"><div class="rc-icon">🔑</div><h3>Admin Panel</h3><p>Users · Schools · Supabase config</p></div>`;
   c.innerHTML=html;
+  // ← ADD THESE 3 LINES HERE
+  const cardCount = c.querySelectorAll('.role-card').length;
+  c.classList.toggle('single', cardCount === 1);
   showScreen('screen-landing');
 }
 
@@ -1086,18 +1108,16 @@ async function saveAttendance(){
 
   const result=await pushToSupabase(record);
   btn.disabled=false;
-
   if(result.ok){
-    btn.innerHTML='✓ Sent!';
-    statusEl.innerHTML='<span style="color:var(--green)">✓ Synced to Supabase successfully</span>';
+    btn.textContent='↑ Update & Re-send';
+    statusEl.innerHTML='<span style="color:var(--green)">✓ Synced to dashboard</span>';
+    document.getElementById('t-att-badge').innerHTML=`<span class="pill pill-a">Saved ${fmtTime(record.submitted_at)}</span>`;
     showToast('✓ Attendance saved & sent!');
   } else {
-    btn.innerHTML='↑ Retry Send';
-    statusEl.innerHTML=`<span style="color:var(--amber)">⚠ Saved locally. Supabase error: ${result.error}</span>`;
-    showToast('Saved locally — Supabase sync failed');
+    btn.textContent='↑ Update & Re-send';
+    statusEl.innerHTML=`<span style="color:var(--red)">⚠ Saved locally. Sync failed: ${result.error||'Unknown error'}</span>`;
+    showToast('⚠ Saved locally, sync failed');
   }
-
-  loadAttendanceForm();
 }
 
 // HISTORY
@@ -1742,7 +1762,7 @@ async function pushToSupabase(record){
       },
       body:JSON.stringify(payload),
     });
-    if(res.ok||res.status===201||res.status===200)return{ok:true};
+    if(res.status===200||res.status===201||res.status===204)return{ok:true};
     const body=await res.text();
     return{ok:false,error:`HTTP ${res.status}: ${body.slice(0,80)}`};
   }catch(e){return{ok:false,error:e.message}}
