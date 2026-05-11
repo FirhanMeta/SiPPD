@@ -910,25 +910,25 @@ function goHome(){if(CU)showLanding();else showScreen('screen-login')}
 // ══════════════════════════════════════════════════
 // TEACHER
 // ══════════════════════════════════════════════════
-function openTeacher(){
-  const user=getUsers().find(u=>u.username===CU.username);
-  const schoolCode=user&&user.school?user.school:null;
-  if(!schoolCode){showToast('⚠ No school assigned. Contact admin.');return}
-  const schools=getSchools();
-  const school=schools.find(s=>s.code===schoolCode);
-  if(!school){showToast('⚠ Assigned school not found. Contact admin.');return}
-  CU._school=school;
-  document.getElementById('t-school-title').textContent=school.name;
-  document.getElementById('t-school-sub').textContent=school.code;
-  document.getElementById('t-date').value=today();
-  document.getElementById('setup-school-name').textContent=school.name;
-  document.getElementById('setup-school-code').textContent=school.code;
+function openTeacher() {
+  const schoolCode = CU.school || null;
+  if (!schoolCode) { showToast('⚠ No school assigned. Contact admin.'); return; }
+
+  const schools = getSchools();
+  const school = schools.find(s => s.code === schoolCode);
+  if (!school) { showToast('⚠ Assigned school not found. Contact admin.'); return; }
+
+  CU._school = school;
+  document.getElementById('t-school-title').textContent = school.name;
+  document.getElementById('t-school-sub').textContent = school.code;
+  document.getElementById('t-date').value = today();
+  document.getElementById('setup-school-name').textContent = school.name;
+  document.getElementById('setup-school-code').textContent = school.code;
   loadSetupRows();
   loadAttendanceForm();
   tTab('att');
   showScreen('screen-teacher');
 }
-
 function tTab(tab){
   ['att','setup','hist'].forEach(t=>{
     document.getElementById('tc-'+t).style.display='none';
