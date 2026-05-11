@@ -5,6 +5,10 @@ export default async function handler(req, res) {
 
   const { username, password } = req.body;
 
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password required' });
+  }
+
   try {
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(
@@ -19,12 +23,23 @@ export default async function handler(req, res) {
       .single();
 
     if (error || !data) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'Incorrect username or password.' });
     }
 
-    // Compare password (you'll need to hash here too)
-    res.status(200).json({ user: data });
+    // Compare plain text passwords (NOT SECURE - temporary only!)
+    if (data.password !== password) {
+      return res.status(401).json({ error: 'Incorrect username or password.' });
+    }
+
+    // Login successful - return user without password
+    const { password: _, ...userWithoutPassword } = data;
+    return res.status(200).json({ 
+      success: true,
+      user: userWithoutPassword 
+    });
+
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Login API error:', err);
+    return res.status(500).json({ error: 'Server error. Try again.' });
   }
 }
