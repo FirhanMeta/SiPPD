@@ -2115,9 +2115,21 @@ async function pushToSupabase(record){
       attendance_rate:record.attendance_rate,
       classrooms:record.classrooms,
     };
-    // Use PATCH with filter to upsert existing record
-    const res=await fetch(`${cfg.url}/rest/v1/${cfg.table}?school_code=eq.${record.school_code}&date=eq.${record.date}`,{
-      method:'POST',
+    // PATCH first — update existing record
+    const patchRes=await fetch(`${cfg.url}/rest/v1/${cfg.table}?school_code=eq.${record.school_code}&date=eq.${record.date}`,{
+      method:'PATCH',
+      headers:{
+        'apikey':cfg.key,
+        'Authorization':'Bearer '+cfg.key,
+        'Content-Type':'application/json',
+        'Prefer':'return=minimal',
+      },
+      body:JSON.stringify(payload),
+    });
+    if(patchRes.ok) return{ok:true};
+    // Fallback POST — insert new record
+    const postRes=await fetch(`${cfg.url}/rest/v1/${cfg.table}`,{
+      method:'POST', // use POST for inserting new records
       headers:{
         'apikey':cfg.key,
         'Authorization':'Bearer '+cfg.key,
@@ -2126,9 +2138,9 @@ async function pushToSupabase(record){
       },
       body:JSON.stringify(payload),
     });
-    if(res.status===200||res.status===201||res.status===204) return{ok:true};
-    const body=await res.text();
-    return{ok:false,error:`HTTP ${res.status}: ${body.slice(0,80)}`};
+    if(postRes.status===200||postRes.status===201||postRes.status===204) return{ok:true};
+    const body=await postRes.text();
+    return{ok:false,error:`HTTP ${postRes.status}: ${body.slice(0,80)}`};
   }catch(e){return{ok:false,error:e.message}}
 }
 async function saveSetupToSupabase(code, classes) {
