@@ -1132,7 +1132,7 @@ function openTeacher(){
   document.getElementById('t-school-sub').textContent = school.code;
   document.getElementById('setup-school-name').textContent = school.name;
   document.getElementById('setup-school-code').textContent = school.code;
-  aTab('att');  // ← was tTab, now aTab
+  tTab('att');
   showScreen('screen-teacher');
   initCalendar();
 }
@@ -1184,7 +1184,18 @@ async function saveSetup(){
   }
   loadAttendanceForm();
 }
-
+function tTab(tab){
+  ['att','setup','hist'].forEach(t=>{
+    const content = document.getElementById('tc-'+t);
+    const btn = document.getElementById('tb-'+t);
+    if(content) content.style.display='none';
+    if(btn) btn.classList.remove('active');
+  });
+  const activeContent = document.getElementById('tc-'+tab);
+  const activeBtn = document.getElementById('tb-'+tab);
+  if(activeContent) activeContent.style.display='block';
+  if(activeBtn) activeBtn.classList.add('active');
+}
 // ATTENDANCE FORM
 function loadAttendanceForm(){
   const code=CU._school?.code;
