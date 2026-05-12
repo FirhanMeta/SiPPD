@@ -1122,12 +1122,6 @@ function delSetupRow(id){
 }
 async function saveSetup(){
   const code=CU._school?.code;
-
-  const existing = getSetup(code);
-  if(existing && existing.length){
-  const ok = confirm(`⚠ Setup for ${CU._school.name} already exists.\n\nOverwrite with new data?`);
-  if(!ok) return;
-}
   const errEl=document.getElementById('setup-err');
   errEl.style.display='none';
   const rows=document.querySelectorAll('#setup-rows .cs-row');
