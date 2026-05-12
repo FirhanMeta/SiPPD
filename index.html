@@ -279,6 +279,77 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .role-cards{grid-template-columns:1fr}
   .att-row{grid-template-columns:1fr 70px 70px 60px}
 }
+/* Calendar Styles */
+.cal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.cal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.cal-nav {
+  display: flex;
+  gap: 8px;
+}
+
+.cal-nav button {
+  background: var(--lite);
+  border: 1.5px solid var(--bdr);
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cal-nav button:hover {
+  background: var(--bdr);
+  border-color: var(--sky);
+}
+
+#cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.cal-day-header {
+  text-align: center;
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cal-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-weight: 600;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cal-cell:hover {
+  background: var(--lite);
+}
 </style>
 </head>
 <body>
@@ -306,7 +377,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
-<!-- LANDING -->
+<!-- LANDING --><div class="card">
 <div id="screen-landing" class="screen">
   <div class="landing">
     <div class="land-logo">📊</div>
@@ -782,11 +853,22 @@ function calNav(dir){
 
 function renderCalendar(){
   const code = CU._school?.code;
+  // ✅ FIXED: Use hardcoded months array instead of toLocaleDateString
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const title = `${months[calMonth]} ${calYear}`;
+  document.getElementById('cal-title').textContent = title;
 
   const grid = document.getElementById('cal-grid');
   grid.innerHTML = '';
+
+  // Add day headers (Mo, Tu, We, etc.)
+  const dayHeaders = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+  dayHeaders.forEach(day => {
+    const header = document.createElement('div');
+    header.className = 'cal-day-header';
+    header.textContent = day;
+    grid.appendChild(header);
+  });
 
   const firstDay = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
   const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
@@ -798,7 +880,10 @@ function renderCalendar(){
 
   // Empty cells before first day
   for(let i = 0; i < startOffset; i++){
-    grid.innerHTML += `<div></div>`;
+    const emptyCell = document.createElement('div');
+    emptyCell.className = 'cal-cell';
+    emptyCell.style.opacity = '0';
+    grid.appendChild(emptyCell);
   }
 
   for(let d = 1; d <= daysInMonth; d++){
@@ -810,9 +895,13 @@ function renderCalendar(){
     const isSelected = dateStr === selected;
     const hasRecord = code ? !!getRecord(code, dateStr) : false;
 
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell';
+    cell.textContent = d;
+
     let bg = 'transparent';
     let color = 'var(--navy)';
-    let border = '1px solid transparent';
+    let border = '2px solid transparent';
     let cursor = 'pointer';
     let opacity = '1';
 
@@ -836,22 +925,17 @@ function renderCalendar(){
       border = '2px solid #2E8BC0';
     }
 
-    grid.innerHTML += `
-      <div onclick="${isWeekend ? '' : `selectCalDate('${dateStr}')`}"
-        style="
-          padding:6px 2px;
-          border-radius:8px;
-          font-size:13px;
-          font-weight:600;
-          background:${bg};
-          color:${color};
-          border:${border};
-          cursor:${cursor};
-          opacity:${opacity};
-          transition:all .15s;
-        "
-        ${!isWeekend ? `onmouseover="if('${dateStr}'!==document.getElementById('t-date').value)this.style.opacity='.7'" onmouseout="this.style.opacity='1'"` : ''}
-      >${d}</div>`;
+    cell.style.background = bg;
+    cell.style.color = color;
+    cell.style.border = border;
+    cell.style.cursor = cursor;
+    cell.style.opacity = opacity;
+
+    if(!isWeekend){
+      cell.onclick = () => selectCalDate(dateStr);
+    }
+
+    grid.appendChild(cell);
   }
 }
 
@@ -1340,9 +1424,17 @@ function loadHistory(){
   el.innerHTML=records.map(r=>`
     <div class="card ai" style="margin-bottom:10px">
       <div class="card-body">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <strong style="font-size:14px;color:var(--navy)">${fmtDate(r.date)}</strong>
-          ${rb(r.attendance_rate)}
+        <div class="card-body">
+            <div class="cal-header">
+              <div class="cal-title" id="cal-title">Loading...</div>
+              <div class="cal-nav">
+                <button onclick="calNav(-1)">←</button>
+                <button onclick="calNav(1)">→</button>
+              </div>
+            </div>
+            <div id="cal-grid"></div>
+            <input type="date" id="t-date" class="fc" style="margin-bottom:0" readonly>
+          </div>
         </div>
         <div style="font-size:12px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap">
           <span>👩‍🎓 ${r.total_present}/${r.total_enrolled} present</span>
