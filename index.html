@@ -1293,7 +1293,7 @@ async function saveAttendance(){
     classrooms,
   };
 
-  saveRecord(code,date,record);
+  saveRecord(record);
 
   const syncEl=document.getElementById('t-sync-status');
   syncEl.textContent='Sending to Supabase…';
