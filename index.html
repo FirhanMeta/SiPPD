@@ -1122,6 +1122,12 @@ function delSetupRow(id){
 }
 async function saveSetup(){
   const code=CU._school?.code;
+
+  const existing = getSetup(code);
+  if(existing && existing.length){
+  const ok = confirm(`⚠ Setup for ${CU._school.name} already exists.\n\nOverwrite with new data?`);
+  if(!ok) return;
+}
   const errEl=document.getElementById('setup-err');
   errEl.style.display='none';
   const rows=document.querySelectorAll('#setup-rows .cs-row');
@@ -1152,6 +1158,16 @@ async function saveSetup(){
   }
   loadAttendanceForm();
 }
+function loadSetupRows(){
+  const code = CU._school?.code;
+  if(!code) return;
+  const classes = getSetup(code) || [];
+  setupRowCounter = 0;
+  document.getElementById('setup-rows').innerHTML = '';
+  if(classes.length){
+    classes.forEach(cls => addSetupRow(cls.name, cls.enrolled));
+  }
+}
 function tTab(tab){
   ['att','setup','hist'].forEach(t=>{
     const content = document.getElementById('tc-'+t);
@@ -1163,6 +1179,10 @@ function tTab(tab){
   const activeBtn = document.getElementById('tb-'+tab);
   if(activeContent) activeContent.style.display='block';
   if(activeBtn) activeBtn.classList.add('active');
+
+  // Load data when switching tabs
+  if(tab==='setup') loadSetupRows();
+  if(tab==='hist') loadHistory();
 }
 // ATTENDANCE FORM
 function loadAttendanceForm(){
