@@ -1132,8 +1132,7 @@ function openTeacher(){
   document.getElementById('t-school-sub').textContent = school.code;
   document.getElementById('setup-school-name').textContent = school.name;
   document.getElementById('setup-school-code').textContent = school.code;
-  // loadSetupRows(); ← REMOVED, doesn't exist
-  tTab('att');
+  aTab('att');  // ← was tTab, now aTab
   showScreen('screen-teacher');
   initCalendar();
 }
