@@ -843,7 +843,6 @@ function initCalendar(){
   renderCalendar();
   loadAttendanceForm();
 }
-
 function calNav(dir){
   calMonth += dir;
   if(calMonth > 11){ calMonth = 0; calYear++; }
@@ -1120,25 +1119,23 @@ function togglePw() {
 // ══════════════════════════════════════════════════
 // TEACHER
 // ══════════════════════════════════════════════════
-function openTeacher() {
+function openTeacher(){
   const schoolCode = CU.school || null;
-  if (!schoolCode) { showToast('⚠ No school assigned. Contact admin.'); return; }
+  if(!schoolCode){ showToast('⚠ No school assigned. Contact admin.'); return; }
 
   const schools = getSchools();
   const school = schools.find(s => s.code === schoolCode);
-  if (!school) { showToast('⚠ Assigned school not found. Contact admin.'); return; }
+  if(!school){ showToast('⚠ Assigned school not found. Contact admin.'); return; }
 
   CU._school = school;
   document.getElementById('t-school-title').textContent = school.name;
   document.getElementById('t-school-sub').textContent = school.code;
-  document.getElementById('t-date').value = today();
   document.getElementById('setup-school-name').textContent = school.name;
   document.getElementById('setup-school-code').textContent = school.code;
   loadSetupRows();
-  loadAttendanceForm();
   tTab('att');
   showScreen('screen-teacher');
-  initCalendar();  // ⬅️ ADD THIS LINE
+  initCalendar(); // ← sets date + renders calendar + loads form
 }
 function addSetupRow(name='',enrolled=''){
   setupRowCounter++;
