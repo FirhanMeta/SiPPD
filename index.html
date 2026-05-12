@@ -1731,11 +1731,32 @@ async function getPPDFromSupabase(){
 // BUG FIX 1: loadSupaForm now correctly reads from getSupaConfig()
 // instead of referencing undefined variables SUPABASE_URL/SUPABASE_KEY/TABLE_NAME
 // ══════════════════════════════════════════════════
-function loadSupaForm(){
+function loadSupaForm() {
   const cfg = getSupaConfig();
-  document.getElementById('sb-url').value   = cfg.url   || '';
-  document.getElementById('sb-key').value   = cfg.key   || '';
-  document.getElementById('sb-table').value = cfg.table || 'attendance';
+  const connected = !!(cfg.url && cfg.key);
+  document.getElementById('sb-status-dot').style.background = connected ? '#1DB87A' : '#E63946';
+  document.getElementById('sb-status-text').textContent = connected
+    ? `✅ Connected — ${cfg.url}`
+    : '❌ Not connected — check Vercel env vars (SUPABASE_URL, SUPABASE_ANON_KEY)';
+}
+
+async function reconnectSupabase() {
+  showToast('Reconnecting…');
+  try {
+    const res = await fetch('/api/supaconfig');
+    const cfg = await res.json();
+    if (cfg.url && cfg.key) {
+      saveSupaConf(cfg);
+      loadSupaForm();
+      showToast('✅ Reconnected successfully!');
+    } else {
+      document.getElementById('sb-status-dot').style.background = '#E63946';
+      document.getElementById('sb-status-text').textContent = '❌ Missing env vars on server';
+      showToast('❌ Check Vercel env vars');
+    }
+  } catch(e) {
+    showToast('❌ Network error: ' + e.message);
+  }
 }
 
 function saveSupaConfig(){
@@ -2083,30 +2104,38 @@ function genId(){return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=
 // ══════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', async ()=>{
+document.addEventListener('DOMContentLoaded', async () => {
   initDefaults();
 
-  const cfg = getSupaConfig();
-  if(cfg.url && cfg.key){
-    const remoteUsers = await getUsersFromSupabase();
-    if(remoteUsers && remoteUsers.length) saveUsers(remoteUsers);
+  // Auto-load Supabase config from server env vars
+  try {
+    const res = await fetch('/api/supaconfig');
+    const cfg = await res.json();
+    if (cfg.url && cfg.key) {
+      saveSupaConf(cfg); // saves to localStorage for rest of session
 
-    const remoteSchools = await getSchoolsFromSupabase();
-    if(remoteSchools && remoteSchools.length) saveSchools(remoteSchools);
+      const [remoteUsers, remoteSchools, remoteJPN, remotePPD] = await Promise.all([
+        getUsersFromSupabase(),
+        getSchoolsFromSupabase(),
+        getJPNFromSupabase(),
+        getPPDFromSupabase()
+      ]);
 
-    const remoteJPN = await getJPNFromSupabase();
-    if(remoteJPN && remoteJPN.length) saveJPN(remoteJPN);
-
-    const remotePPD = await getPPDFromSupabase();
-    if(remotePPD && remotePPD.length) savePPD(remotePPD);
+      if (remoteUsers?.length)  saveUsers(remoteUsers);
+      if (remoteSchools?.length) saveSchools(remoteSchools);
+      if (remoteJPN?.length)    saveJPN(remoteJPN);
+      if (remotePPD?.length)    savePPD(remotePPD);
+    }
+  } catch(e) {
+    console.warn('Auto Supabase config failed:', e);
   }
 
   const saved = localStorage.getItem('sars_session');
-  if(saved){
-    try{
+  if (saved) {
+    try {
       CU = JSON.parse(saved);
       showLanding();
-    } catch{
+    } catch {
       localStorage.removeItem('sars_session');
       showScreen('screen-login');
     }
