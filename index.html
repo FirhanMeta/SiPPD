@@ -906,7 +906,20 @@ function showLanding(){
 }
 
 function goHome(){if(CU)showLanding();else showScreen('screen-login')}
-
+// ══════════════════════════════════════════════════
+// TOGGLE PASSWORD VISIBILITY
+// ══════════════════════════════════════════════════
+function togglePw() {
+  const input = document.getElementById('l-pass');
+  const btn = document.querySelector('.pw-eye svg');
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.style.opacity = '1';
+  } else {
+    input.type = 'password';
+    btn.style.opacity = '0.5';
+  }
+}
 // ══════════════════════════════════════════════════
 // TEACHER
 // ══════════════════════════════════════════════════
