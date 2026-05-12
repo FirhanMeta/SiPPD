@@ -1057,12 +1057,15 @@ function openTeacher() {
 }
 function tTab(tab){
   ['att','setup','hist'].forEach(t=>{
-    document.getElementById('tc-'+t).style.display='none';
-    document.getElementById('tb-'+t).classList.remove('active');
+    const content = document.getElementById('tc-'+t);
+    const btn = document.getElementById('tb-'+t);
+    if(content) content.style.display='none';
+    if(btn) btn.classList.remove('active');
   });
-  document.getElementById('tc-'+tab).style.display='block';
-  document.getElementById('tb-'+tab).classList.add('active');
-  if(tab==='hist')loadHistory();
+  const activeContent = document.getElementById('tc-'+tab);
+  const activeBtn = document.getElementById('tb-'+tab);
+  if(activeContent) activeContent.style.display='block';
+  if(activeBtn) activeBtn.classList.add('active');
 }
 
 // CLASS SETUP
