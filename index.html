@@ -767,10 +767,10 @@ function initCalendar(){
   const now = new Date();
   calYear = now.getFullYear();
   calMonth = now.getMonth();
-  renderCalendar();
-  // Set today as default selected date
-  const todayStr = now.toISOString().slice(0,10);
+  const todayStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   document.getElementById('t-date').value = todayStr;
+  renderCalendar();
+  loadAttendanceForm();
 }
 
 function calNav(dir){
@@ -782,8 +782,8 @@ function calNav(dir){
 
 function renderCalendar(){
   const code = CU._school?.code;
-  const title = new Date(calYear, calMonth, 1).toLocaleDateString('en-MY', {month:'long', year:'numeric'});
-  document.getElementById('cal-title').textContent = title;
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const title = `${months[calMonth]} ${calYear}`;
 
   const grid = document.getElementById('cal-grid');
   grid.innerHTML = '';
