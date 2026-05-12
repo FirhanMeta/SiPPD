@@ -1132,10 +1132,10 @@ function openTeacher(){
   document.getElementById('t-school-sub').textContent = school.code;
   document.getElementById('setup-school-name').textContent = school.name;
   document.getElementById('setup-school-code').textContent = school.code;
-  loadSetupRows();
+  // loadSetupRows(); ← REMOVED, doesn't exist
   tTab('att');
   showScreen('screen-teacher');
-  initCalendar(); // ← sets date + renders calendar + loads form
+  initCalendar();
 }
 function addSetupRow(name='',enrolled=''){
   setupRowCounter++;
