@@ -1734,10 +1734,14 @@ async function getPPDFromSupabase(){
 function loadSupaForm() {
   const cfg = getSupaConfig();
   const connected = !!(cfg.url && cfg.key);
-  document.getElementById('sb-status-dot').style.background = connected ? '#1DB87A' : '#E63946';
-  document.getElementById('sb-status-text').textContent = connected
+  
+  const dot = document.getElementById('sb-status-dot');
+  const txt = document.getElementById('sb-status-text');
+  
+  if (dot) dot.style.background = connected ? '#1DB87A' : '#E63946';
+  if (txt) txt.textContent = connected
     ? `✅ Connected — ${cfg.url}`
-    : '❌ Not connected — check Vercel env vars (SUPABASE_URL, SUPABASE_ANON_KEY)';
+    : '❌ Not connected — check Vercel env vars';
 }
 
 async function reconnectSupabase() {
