@@ -1680,14 +1680,7 @@ async function hashPassword(password){
 // ══════════════════════════════════════════════════
 // SUPABASE CONFIG 
 // ══════════════════════════════════════════════════
-function getSupaConfig(){
-        const saved = S.get('sars_supa', {});
-        return {
-          url:   saved.url   || SUPA_URL,    // ← from config.js
-          key:   saved.key   || SUPA_KEY,    // ← from config.js
-          table: saved.table || SUPA_TABLE   // ← from config.js
-        };
-      }
+
 // ══════════════════════════════════════════════════
 // DEFAULT SCHOOLS LIST
 // ══════════════════════════════════════════════════
@@ -2761,9 +2754,7 @@ function saveSupaConfig(){
 // ══════════════════════════════════════════════════
 // JPN & PPD HELPERS
 // ══════════════════════════════════════════════════
-function getJPN(){return S.get('sars_jpn',[])}
 function saveJPN(j){S.set('sars_jpn',j)}
-function getPPD(){return S.get('sars_ppd',[])}
 function savePPD(p){S.set('sars_ppd',p)}
 
 async function getJPNFromSupabase(){
@@ -2935,42 +2926,6 @@ async function pushToSupabase(record){
     const body=await postRes.text();
     return{ok:false,error:`HTTP ${postRes.status}: ${body.slice(0,80)}`};
   }catch(e){return{ok:false,error:e.message}}
-}
-async function saveSetupToSupabase(code, classes) {
-  const cfg = getSupaConfig();
-  if (!cfg.url || !cfg.key) return { ok: false };
-  try {
-    const res = await fetch(`${cfg.url}/rest/v1/class_setup`, {
-      method: 'POST',
-      headers: {
-        'apikey': cfg.key,
-        'Authorization': 'Bearer ' + cfg.key,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates', // upsert by school_code
-      },
-      body: JSON.stringify({ school_code: code, classes, updated_at: new Date().toISOString() }),
-    });
-    return { ok: res.ok };
-  } catch(e) {
-    return { ok: false, error: e.message };
-  }
-}
-async function loadSetupFromSupabase(code) {
-  const cfg = getSupaConfig();
-  if (!cfg.url || !cfg.key) return null;
-  try {
-    const res = await fetch(`${cfg.url}/rest/v1/class_setup?school_code=eq.${code}&limit=1`, {
-      headers: {
-        'apikey': cfg.key,
-        'Authorization': 'Bearer ' + cfg.key,
-      }
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data[0]?.classes || null;
-  } catch {
-    return null;
-  }
 }
 // ══════════════════════════════════════════════════
 // EXPORT / PRINT
