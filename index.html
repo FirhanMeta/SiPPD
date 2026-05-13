@@ -2246,10 +2246,10 @@ function loadAdminUsers(){
   document.getElementById('adm-total').textContent=users.length;
   document.getElementById('adm-roles').textContent=new Set(users.map(u=>u.role)).size;
   populateSchoolSelects();
-  const roleIcon={teacher:'🏫',officer:'📋',admin:'🔑'};
-  const roleLabel={teacher:'Teacher',officer:'Officer',admin:'Admin'};
-  const avClass={teacher:'av-t',officer:'av-o',admin:'av-a'};
-  const pillClass={teacher:'pill-g',officer:'pill-b',admin:'pill-a'};
+  const roleIcon={teacher:'🏫',officer:'📋',ppd:'📋',admin:'🔑'};
+  const roleLabel={teacher:'Teacher',officer:'Officer',ppd:'PPD',admin:'Admin'};
+  const avClass={teacher:'av-t',officer:'av-o',ppd:'av-o',admin:'av-a'};
+  const pillClass={teacher:'pill-g',officer:'pill-b',ppd:'pill-b',admin:'pill-a'};
   const schools=getSchools();
   document.getElementById('adm-ulist').innerHTML=users.map(u=>{
     const schoolName=u.school?schools.find(s=>s.code===u.school)?.name||u.school:'—';
