@@ -641,9 +641,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <div class="fg"><label class="flabel">Username <span>*</span></label><input type="text" class="fc" id="au-user" placeholder="e.g. teacher01" autocapitalize="none"></div>
           <div class="fg">
             <label class="flabel">Role <span>*</span></label>
-            <select class="fc" id="au-role">
+            <select class="fc" id="au-role" onchange="onRoleChange('au')">
               <option value="teacher">🏫 Teacher</option>
-              <option value="officer">📋 Officer</option>
+              <option value="ppd">📋 PPD Officer</option>
               <option value="admin">🔑 Admin</option>
             </select>
           </div>
@@ -653,12 +653,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <div class="fg"><label class="flabel">Display Name</label><input type="text" class="fc" id="au-display" placeholder="e.g. Cikgu Ahmad"></div>
         </div>
         <div class="fg">
-          <label class="flabel">School (for Teacher)</label>
-          <select class="fc" id="au-school">
-            <option value="">— Not applicable —</option>
-          </select>
-          <div class="fhint">Assign a school if role is Teacher. One teacher per school.</div>
-        </div>
+          <div class="fg" id="au-school-wrap" style="display:none">
+            <label class="flabel">School <span>*</span></label>
+            <select class="fc" id="au-school">
+              <option value="">— Select School —</option>
+            </select>
+            <div class="fhint">One teacher per school.</div>
+          </div>
+          <div class="fg" id="au-ppd-wrap" style="display:none">
+            <label class="flabel">PPD <span>*</span></label>
+            <select class="fc" id="au-ppd">
+              <option value="">— Select PPD —</option>
+            </select>
+            <div class="fhint">One officer per PPD.</div>
+          </div>
         <div id="au-err" class="alert al-err" style="display:none"></div>
         <button class="btn btn-g btn-full" onclick="addUser()">➕ Create Account</button>
       </div>
@@ -695,9 +703,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
         <!-- EXISTING: School Code + Name -->
         <div class="frow">
+          <div class="fg">
+            <label class="flabel">School Type <span>*</span></label>
+            <select class="fc" id="sc-type">
+              <option value="SK">SK — Sekolah Kebangsaan</option>
+              <option value="SMK">SMK — Sekolah Menengah Kebangsaan</option>
+              <option value="SJKC">SJKC — SJK Cina</option>
+              <option value="SJKT">SJKT — SJK Tamil</option>
+              <option value="SABK">SABK — Sekolah Agama Bantuan Kerajaan</option>
+              <option value="SMKA">SMKA — SM Kebangsaan Agama</option>
+            </select>
+          </div>
           <div class="fg"><label class="flabel">School Code <span>*</span></label><input type="text" class="fc" id="sc-code" placeholder="e.g. SKA016" autocapitalize="characters"></div>
-          <div class="fg"><label class="flabel">School Name <span>*</span></label><input type="text" class="fc" id="sc-name" placeholder="e.g. SK Penampang"></div>
         </div>
+        <div class="fg"><label class="flabel">School Name <span>*</span></label><input type="text" class="fc" id="sc-name" placeholder="e.g. SK Penampang"></div>
         <div id="sc-err" class="alert al-err" style="display:none"></div>
         <button class="btn btn-p btn-full" onclick="addSchool()">➕ Add School</button>
       </div>
@@ -774,6 +793,122 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     </div>
   </div>
 </div>
+<!-- PPD SCREEN -->
+<div id="screen-ppd" class="screen">
+  <div class="topnav">
+    <button class="nav-back" onclick="goHome()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+    <div style="flex:1">
+      <div class="nav-title" id="ppd-title">PPD Dashboard</div>
+      <div class="nav-sub" id="ppd-sub">—</div>
+    </div>
+    <span class="nav-badge b-officer">PPD</span>
+    <button class="nav-out" onclick="logout()">Sign Out</button>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div style="background:var(--surf);border-bottom:1px solid var(--bdr);padding:10px 16px;display:flex;gap:8px;align-items:center;position:sticky;top:56px;z-index:90">
+    <div style="display:flex;background:var(--lite);border-radius:8px;border:1.5px solid var(--bdr);overflow:hidden;flex-shrink:0">
+      <button id="ppd-tab-day" onclick="ppdToggle('day')" style="padding:7px 14px;font-size:12px;font-weight:700;font-family:var(--font);border:none;cursor:pointer;background:var(--navy);color:#fff;transition:all .2s">Daily</button>
+      <button id="ppd-tab-month" onclick="ppdToggle('month')" style="padding:7px 14px;font-size:12px;font-weight:700;font-family:var(--font);border:none;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s">Monthly</button>
+    </div>
+    <input type="date" class="fc" id="ppd-date" onchange="loadPPDDashboard()" style="flex:1;padding:8px 12px;font-size:13px">
+    <input type="month" class="fc" id="ppd-month" onchange="loadPPDDashboard()" style="flex:1;padding:8px 12px;font-size:13px;display:none">
+    <button class="btn btn-s btn-sm" onclick="exportPPDJSON()">⬇</button>
+    <button class="btn btn-p btn-sm" onclick="printPPDReport()">🖨</button>
+  </div>
+
+  <div class="content" style="padding-bottom:24px">
+
+    <!-- KPI SUMMARY -->
+    <div class="sgrid ai" id="ppd-stats">
+      <div class="scard accent">
+        <div class="slabel">PPD Rate</div>
+        <div class="sval" id="ppd-rate">—</div>
+        <div class="ssub">Overall attendance</div>
+      </div>
+      <div class="scard">
+        <div class="slabel">Total Present</div>
+        <div class="sval" id="ppd-present">—</div>
+        <div class="ssub">of <span id="ppd-enrolled">—</span> enrolled</div>
+      </div>
+      <div class="scard">
+        <div class="slabel">Submitted</div>
+        <div class="sval" id="ppd-submitted">—</div>
+        <div class="ssub">of <span id="ppd-total-schools">—</span> schools</div>
+      </div>
+      <div class="scard">
+        <div class="slabel">Intervention</div>
+        <div class="sval" id="ppd-intervention" style="color:var(--red)">—</div>
+        <div class="ssub">schools &lt; 85%</div>
+      </div>
+    </div>
+
+    <!-- KPI LEGEND -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+      <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(212,175,55,.15);color:#8a6d00;border:1px solid rgba(212,175,55,.3)">🏆 Platinum ≥95%</span>
+      <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(26,95,156,.12);color:var(--blue);border:1px solid rgba(26,95,156,.2)">🥇 Gold ≥90%</span>
+      <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(107,126,146,.12);color:#4a5568;border:1px solid rgba(107,126,146,.2)">🥈 Silver ≥85%</span>
+      <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(230,57,70,.1);color:var(--red);border:1px solid rgba(230,57,70,.2)">🚨 Intervention &lt;85%</span>
+    </div>
+
+    <!-- SCHOOL CARDS -->
+    <div id="ppd-empty" class="empty" style="display:none">
+      <div class="empty-icon">📭</div>
+      <h3>No submissions yet</h3>
+      <p>No schools have submitted for this period.</p>
+    </div>
+    <div id="ppd-cards" style="display:flex;flex-direction:column;gap:10px"></div>
+
+  </div>
+</div>
+
+<!-- PPD SCHOOL DETAIL MODAL -->
+<div class="modal-ov" id="modal-ppd-school">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-hd">
+      <div>
+        <h3 id="ppd-modal-title">School Detail</h3>
+        <div id="ppd-modal-meta" style="font-size:11px;color:var(--muted);margin-top:2px;font-family:var(--mono)"></div>
+      </div>
+      <button class="modal-x" onclick="closeModal('modal-ppd-school')">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <!-- Summary bar -->
+      <div id="ppd-modal-summary" style="display:grid;grid-template-columns:repeat(3,1fr);background:var(--navy);padding:14px 16px;gap:8px">
+        <div style="text-align:center">
+          <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Rate</div>
+          <div id="ppd-modal-rate" style="font-size:22px;font-weight:700;color:#fff;font-family:var(--mono)">—</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Present</div>
+          <div id="ppd-modal-present" style="font-size:22px;font-weight:700;color:#1DB87A;font-family:var(--mono)">—</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Enrolled</div>
+          <div id="ppd-modal-enrolled" style="font-size:22px;font-weight:700;color:#fff;font-family:var(--mono)">—</div>
+        </div>
+      </div>
+      <!-- Classroom table -->
+      <div style="overflow-x:auto">
+        <table class="dtable" style="font-size:13px">
+          <thead>
+            <tr>
+              <th>Classroom</th>
+              <th style="text-align:center">Enrolled</th>
+              <th style="text-align:center">Present</th>
+              <th style="text-align:center">Absent</th>
+              <th style="text-align:center">Rate</th>
+            </tr>
+          </thead>
+          <tbody id="ppd-modal-tbody"></tbody>
+        </table>
+      </div>
+      <div id="ppd-modal-footer" style="padding:10px 16px;font-size:11px;color:var(--muted);border-top:1px solid var(--bdr)"></div>
+    </div>
+  </div>
+</div>
 
 <!-- EDIT USER MODAL -->
 <div class="modal-ov" id="modal-edit">
@@ -788,15 +923,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <div class="fg"><label class="flabel">Display Name</label><input type="text" class="fc" id="eu-display"></div>
       <div class="fg">
         <label class="flabel">Role</label>
-        <select class="fc" id="eu-role">
+        <select class="fc" id="eu-role" onchange="onRoleChange('eu')">
           <option value="teacher">🏫 Teacher</option>
-          <option value="officer">📋 Officer</option>
+          <option value="ppd">📋 PPD Officer</option>
           <option value="admin">🔑 Admin</option>
         </select>
       </div>
-      <div class="fg">
-        <label class="flabel">School (Teacher only)</label>
-        <select class="fc" id="eu-school"><option value="">— Not applicable —</option></select>
+      <div class="fg" id="eu-school-wrap" style="display:none">
+        <label class="flabel">School</label>
+        <select class="fc" id="eu-school"><option value="">— Select School —</option></select>
+      </div>
+      <div class="fg" id="eu-ppd-wrap" style="display:none">
+        <label class="flabel">PPD</label>
+        <select class="fc" id="eu-ppd"><option value="">— Select PPD —</option></select>
       </div>
       <div class="fg"><label class="flabel">New Password <span style="color:var(--muted);font-weight:400;text-transform:none">(blank = keep)</span></label><input type="password" class="fc" id="eu-pass" placeholder="Leave blank to keep"></div>
       <div id="eu-err" class="alert al-err" style="display:none"></div>
@@ -834,6 +973,275 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </script>
 <script>
+// ══════════════════════════════════════════════════
+// PPD DASHBOARD
+// ══════════════════════════════════════════════════
+let ppdMode = 'day'; // 'day' or 'month'
+
+function openPPD() {
+  const ppd = CU.ppd;
+  if (!ppd) { showToast('⚠ No PPD assigned. Contact admin.'); return; }
+  document.getElementById('ppd-title').textContent = 'PPD Dashboard';
+  document.getElementById('ppd-sub').textContent = ppd;
+  document.getElementById('ppd-date').value = today();
+  document.getElementById('ppd-month').value = today().slice(0, 7);
+  ppdMode = 'day';
+  ppdToggle('day');
+  showScreen('screen-ppd');
+  loadPPDDashboard();
+}
+
+function ppdToggle(mode) {
+  ppdMode = mode;
+  document.getElementById('ppd-tab-day').style.background = mode === 'day' ? 'var(--navy)' : 'transparent';
+  document.getElementById('ppd-tab-day').style.color = mode === 'day' ? '#fff' : 'var(--muted)';
+  document.getElementById('ppd-tab-month').style.background = mode === 'month' ? 'var(--navy)' : 'transparent';
+  document.getElementById('ppd-tab-month').style.color = mode === 'month' ? '#fff' : 'var(--muted)';
+  document.getElementById('ppd-date').style.display = mode === 'day' ? 'block' : 'none';
+  document.getElementById('ppd-month').style.display = mode === 'month' ? 'block' : 'none';
+  loadPPDDashboard();
+}
+
+async function loadPPDDashboard() {
+  const ppd = CU.ppd;
+  const cfg = getSupaConfig();
+  if (!cfg.url || !cfg.key) { showToast('⚠ Supabase not configured'); return; }
+
+  // Get all schools under this PPD
+  const schools = getSchools().filter(s => s.ppd_code === ppd);
+  document.getElementById('ppd-total-schools').textContent = schools.length;
+
+  let records = [];
+
+  if (ppdMode === 'day') {
+    const date = document.getElementById('ppd-date').value;
+    if (!date) return;
+    // Fetch from Supabase for this date, filtered by school codes in this PPD
+    const codes = schools.map(s => s.code);
+    if (!codes.length) { renderPPDCards([], schools); return; }
+    try {
+      const res = await fetch(
+        `${cfg.url}/rest/v1/attendance?date=eq.${date}&school_code=in.(${codes.join(',')})&order=school_name`,
+        { headers: { 'apikey': cfg.key, 'Authorization': 'Bearer ' + cfg.key } }
+      );
+      if (res.ok) records = await res.json();
+    } catch(e) { showToast('⚠ Fetch error: ' + e.message); }
+
+  } else {
+    const month = document.getElementById('ppd-month').value;
+    if (!month) return;
+    const [yr, mo] = month.split('-');
+    const startDate = `${yr}-${mo}-01`;
+    const endDate = `${yr}-${mo}-${new Date(yr, mo, 0).getDate()}`;
+    const codes = schools.map(s => s.code);
+    if (!codes.length) { renderPPDCards([], schools); return; }
+    try {
+      // Fetch all records for this month for PPD schools
+      const res = await fetch(
+        `${cfg.url}/rest/v1/attendance?date=gte.${startDate}&date=lte.${endDate}&school_code=in.(${codes.join(',')})&order=school_code`,
+        { headers: { 'apikey': cfg.key, 'Authorization': 'Bearer ' + cfg.key } }
+      );
+      if (res.ok) {
+        const raw = await res.json();
+        // Aggregate by school: average rate, sum totals
+        const map = {};
+        raw.forEach(r => {
+          if (!map[r.school_code]) {
+            map[r.school_code] = {
+              school_code: r.school_code,
+              school_name: r.school_name,
+              school_type: r.school_type,
+              total_enrolled: 0,
+              total_present: 0,
+              total_absent: 0,
+              days: 0,
+              submitted_at: r.submitted_at,
+              submitted_by: r.submitted_by,
+              classrooms: r.classrooms,
+              _rawDays: []
+            };
+          }
+          map[r.school_code].total_enrolled += r.total_enrolled;
+          map[r.school_code].total_present += r.total_present;
+          map[r.school_code].total_absent += r.total_absent;
+          map[r.school_code].days += 1;
+          if (r.submitted_at > map[r.school_code].submitted_at) {
+            map[r.school_code].submitted_at = r.submitted_at;
+            map[r.school_code].classrooms = r.classrooms;
+          }
+          map[r.school_code]._rawDays.push(r);
+        });
+        records = Object.values(map).map(s => ({
+          ...s,
+          attendance_rate: s.total_enrolled > 0
+            ? parseFloat((s.total_present / s.total_enrolled * 100).toFixed(2))
+            : 0
+        }));
+      }
+    } catch(e) { showToast('⚠ Fetch error: ' + e.message); }
+  }
+
+  renderPPDCards(records, schools);
+}
+
+function kpiLevel(rate) {
+  if (rate >= 95) return { label: '🏆 Platinum', color: '#8a6d00', bg: 'rgba(212,175,55,.15)', border: 'rgba(212,175,55,.3)' };
+  if (rate >= 90) return { label: '🥇 Gold',     color: 'var(--blue)', bg: 'rgba(26,95,156,.12)', border: 'rgba(26,95,156,.2)' };
+  if (rate >= 85) return { label: '🥈 Silver',   color: '#4a5568', bg: 'rgba(107,126,146,.12)', border: 'rgba(107,126,146,.2)' };
+  return            { label: '🚨 Intervention', color: 'var(--red)', bg: 'rgba(230,57,70,.1)', border: 'rgba(230,57,70,.2)' };
+}
+
+function renderPPDCards(records, schools) {
+  const submittedCodes = new Set(records.map(r => r.school_code));
+  const totE = records.reduce((a, r) => a + r.total_enrolled, 0);
+  const totP = records.reduce((a, r) => a + r.total_present, 0);
+  const rate = totE > 0 ? (totP / totE * 100).toFixed(1) + '%' : '—';
+  const intervention = records.filter(r => r.attendance_rate < 85).length;
+
+  document.getElementById('ppd-rate').textContent = rate;
+  document.getElementById('ppd-present').textContent = totP || '—';
+  document.getElementById('ppd-enrolled').textContent = totE || '—';
+  document.getElementById('ppd-submitted').textContent = records.length;
+  document.getElementById('ppd-intervention').textContent = intervention;
+
+  const container = document.getElementById('ppd-cards');
+  const emptyEl = document.getElementById('ppd-empty');
+
+  // Build card list: submitted first (sorted by rate desc), then missing
+  const submitted = [...records].sort((a, b) => b.attendance_rate - a.attendance_rate);
+  const missing = schools.filter(s => !submittedCodes.has(s.code));
+
+  if (!submitted.length && !missing.length) {
+    emptyEl.style.display = 'block';
+    container.innerHTML = '';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  const rateBarColor = (r) => r >= 95 ? '#d4af37' : r >= 90 ? 'var(--blue)' : r >= 85 ? '#718096' : 'var(--red)';
+
+  container.innerHTML = submitted.map(r => {
+    const kpi = kpiLevel(r.attendance_rate);
+    const barW = Math.min(r.attendance_rate, 100).toFixed(1);
+    const typeTag = r.school_type || '';
+    return `
+    <div class="card ai" style="cursor:pointer;transition:box-shadow .2s;margin-bottom:0"
+      onclick="openPPDSchoolModal('${r.school_code}')"
+      onmouseover="this.style.boxShadow='var(--sh-lg)'"
+      onmouseout="this.style.boxShadow='var(--sh)'">
+      <div class="card-body" style="padding:14px 16px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:2px">${esc(r.school_name)}</div>
+            <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${r.school_code}${typeTag ? ' · ' + typeTag : ''}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:10px">
+            <span style="padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;background:${kpi.bg};color:${kpi.color};border:1px solid ${kpi.border}">${kpi.label}</span>
+          </div>
+        </div>
+        <!-- Rate bar -->
+        <div style="background:var(--lite);border-radius:6px;height:8px;margin-bottom:10px;overflow:hidden">
+          <div style="height:100%;width:${barW}%;background:${rateBarColor(r.attendance_rate)};border-radius:6px;transition:width .6s ease"></div>
+        </div>
+        <!-- Stats row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">
+          <div style="text-align:center">
+            <div style="font-size:18px;font-weight:700;font-family:var(--mono);color:${rateBarColor(r.attendance_rate)}">${r.attendance_rate.toFixed(1)}%</div>
+            <div style="font-size:10px;color:var(--muted);font-weight:600">RATE</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:18px;font-weight:700;font-family:var(--mono);color:var(--green)">${r.total_present}</div>
+            <div style="font-size:10px;color:var(--muted);font-weight:600">PRESENT</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:18px;font-weight:700;font-family:var(--mono);color:var(--navy)">${r.total_enrolled}</div>
+            <div style="font-size:10px;color:var(--muted);font-weight:600">ENROLLED</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:18px;font-weight:700;font-family:var(--mono);color:var(--red)">${r.total_absent}</div>
+            <div style="font-size:10px;color:var(--muted);font-weight:600">ABSENT</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:right">
+          🕐 Last updated ${fmtTime(r.submitted_at)} · by ${esc(r.submitted_by || '—')}
+        </div>
+      </div>
+    </div>`;
+  }).join('') +
+
+  // Missing schools — greyed out cards
+  missing.map(s => `
+    <div class="card ai" style="opacity:.55;margin-bottom:0">
+      <div class="card-body" style="padding:14px 16px;display:flex;align-items:center;gap:12px">
+        <div style="font-size:24px">📭</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;color:var(--navy)">${esc(s.name)}</div>
+          <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${s.code}${s.type ? ' · ' + s.type : ''}</div>
+        </div>
+        <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#f0f0f0;color:var(--muted)">Not Submitted</span>
+      </div>
+    </div>`).join('');
+
+  // Store records globally for modal access
+  window._ppdRecords = records;
+}
+
+function openPPDSchoolModal(schoolCode) {
+  const records = window._ppdRecords || [];
+  const r = records.find(x => x.school_code === schoolCode);
+  if (!r) return;
+  const kpi = kpiLevel(r.attendance_rate);
+
+  document.getElementById('ppd-modal-title').textContent = r.school_name;
+  document.getElementById('ppd-modal-meta').textContent =
+    `${r.school_code}${r.school_type ? ' · ' + r.school_type : ''} · ${ppdMode === 'day' ? fmtDate(document.getElementById('ppd-date').value) : document.getElementById('ppd-month').value}`;
+
+  document.getElementById('ppd-modal-rate').textContent = r.attendance_rate.toFixed(1) + '%';
+  document.getElementById('ppd-modal-rate').style.color = kpi.color === 'var(--red)' ? '#ff6b7a' : kpi.color === 'var(--blue)' ? '#6EC6F0' : kpi.color === '#8a6d00' ? '#ffd700' : '#aaa';
+  document.getElementById('ppd-modal-present').textContent = r.total_present;
+  document.getElementById('ppd-modal-enrolled').textContent = r.total_enrolled;
+
+  const tbody = document.getElementById('ppd-modal-tbody');
+  if (r.classrooms && r.classrooms.length) {
+    tbody.innerHTML = r.classrooms.map(c => {
+      const rc = c.rate >= 90 ? 'var(--green)' : c.rate >= 75 ? 'var(--amber)' : 'var(--red)';
+      return `<tr>
+        <td><strong>${esc(c.name)}</strong></td>
+        <td style="text-align:center;font-family:var(--mono)">${c.enrolled}</td>
+        <td style="text-align:center;font-family:var(--mono);color:var(--green);font-weight:700">${c.present}</td>
+        <td style="text-align:center;font-family:var(--mono);color:var(--red)">${c.absent}</td>
+        <td style="text-align:center;font-weight:700;color:${rc}">${c.rate}%</td>
+      </tr>`;
+    }).join('') + `<tr style="background:var(--lite)">
+      <td><strong>TOTAL</strong></td>
+      <td style="text-align:center;font-family:var(--mono);font-weight:700">${r.total_enrolled}</td>
+      <td style="text-align:center;font-family:var(--mono);font-weight:700;color:var(--green)">${r.total_present}</td>
+      <td style="text-align:center;font-family:var(--mono);font-weight:700;color:var(--red)">${r.total_absent}</td>
+      <td style="text-align:center;font-weight:700">${r.attendance_rate.toFixed(1)}%</td>
+    </tr>`;
+  } else {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No classroom data</td></tr>`;
+  }
+
+  document.getElementById('ppd-modal-footer').innerHTML =
+    `🕐 Last updated: <strong>${fmtTime(r.submitted_at)}</strong> · Submitted by: <strong>${esc(r.submitted_by || '—')}</strong>` +
+    (r.days ? ` · <strong>${r.days}</strong> school days recorded` : '');
+
+  document.getElementById('modal-ppd-school').classList.add('open');
+}
+
+function exportPPDJSON() {
+  const records = window._ppdRecords || [];
+  if (!records.length) { showToast('⚠ No data to export'); return; }
+  const blob = new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `ppd-attendance-${today()}.json`; a.click();
+  showToast('JSON exported ✓');
+}
+
+function printPPDReport() {
+  showToast('⚠ Monthly report coming in Step 4');
+}
 // ══════════════════════════════════════════════════
 // CALENDAR HELPERS
 // ══════════════════════════════════════════════════
@@ -1058,8 +1466,10 @@ function showLanding(){
   let html='';
   if(CU.role==='teacher'||CU.role==='admin')
     html+=`<div class="role-card" onclick="openTeacher()"><div class="rc-icon">🏫</div><h3>Teacher</h3><p>Submit daily attendance</p></div>`;
-  if(CU.role==='officer'||CU.role==='admin')
-    html+=`<div class="role-card" onclick="openOfficer()"><div class="rc-icon">📋</div><h3>District Officer</h3><p>View district dashboard</p></div>`;
+  if(CU.role==='ppd'||CU.role==='admin')
+  html+=`<div class="role-card" onclick="openPPD()"><div class="rc-icon">📋</div><h3>PPD Dashboard</h3><p>Monitor your district schools</p></div>`;
+  if(CU.role==='admin')
+  html+=`<div class="role-card" onclick="openOfficer()"><div class="rc-icon">🏛</div><h3>JPN Dashboard</h3><p>View all districts</p></div>`;
   if(CU.role==='admin')
     html+=`<div class="role-card" onclick="openAdmin()" style="grid-column:span 2;background:rgba(240,165,0,.1);border-color:rgba(240,165,0,.25)"><div class="rc-icon">🔑</div><h3>Admin Panel</h3><p>Users · Schools · Supabase config</p></div>`;
   c.innerHTML=html;
@@ -1467,6 +1877,10 @@ function openAdmin(){
   loadSupaForm();
   populateJPNSelects();
   populateSchoolSelects();
+  populatePPDSelect('au-ppd');
+  populatePPDSelect('eu-ppd');
+  onRoleChange('au');
+  onRoleChange('eu');
   aTab('users');
   showScreen('screen-admin');
 }
@@ -1577,7 +1991,9 @@ function openEdit(username){
   document.getElementById('eu-orig').value=u.username;
   document.getElementById('eu-user').value=u.username;
   document.getElementById('eu-display').value=u.display||'';
-  document.getElementById('eu-role').value=u.role;
+  document.getElementById('eu-role').value = u.role;
+  onRoleChange('eu');
+  populatePPDSelect('eu-ppd', u.ppd || '');
   document.getElementById('eu-pass').value='';
   document.getElementById('eu-err').style.display='none';
   populateSchoolSelects('eu-school',u.school);
@@ -1697,7 +2113,8 @@ async function addSchool(){
   if(!ppd_code){errEl.textContent='⚠ Please select a PPD.';errEl.style.display='flex';return}
   const schools=getSchools();
   if(schools.find(s=>s.code===code)){errEl.textContent='⚠ School code already exists.';errEl.style.display='flex';return}
-  schools.push({code,name,jpn_code,ppd_code});
+  const type = document.getElementById('sc-type').value;
+  schools.push({code, name, type, jpn_code, ppd_code});
   saveSchools(schools);
   await saveSchoolsToSupabase(schools);
   document.getElementById('sc-code').value='';
@@ -2388,6 +2805,24 @@ function showSubmittedSummary(record){
         </div>
       </div>
     </div>`;
+}
+// ══════════════════════════════════════════════════
+// ROLE-CONDITIONAL FORM LOGIC
+// ══════════════════════════════════════════════════
+function onRoleChange(prefix) {
+  const role = document.getElementById(prefix + '-role').value;
+  const schoolWrap = document.getElementById(prefix + '-school-wrap');
+  const ppdWrap = document.getElementById(prefix + '-ppd-wrap');
+  if (schoolWrap) schoolWrap.style.display = role === 'teacher' ? 'block' : 'none';
+  if (ppdWrap) ppdWrap.style.display = role === 'ppd' ? 'block' : 'none';
+}
+
+function populatePPDSelect(elId, selected = '') {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const ppds = getPPD();
+  el.innerHTML = '<option value="">— Select PPD —</option>' +
+    ppds.map(p => `<option value="${esc(p.code)}" ${p.code === selected ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
 }
 // ══════════════════════════════════════════════════
 // INIT
