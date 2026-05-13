@@ -2251,13 +2251,15 @@ function loadAdminUsers(){
   const avClass={teacher:'av-t',officer:'av-o',ppd:'av-o',admin:'av-a'};
   const pillClass={teacher:'pill-g',officer:'pill-b',ppd:'pill-b',admin:'pill-a'};
   const schools=getSchools();
+  const ppds=getPPD();
   document.getElementById('adm-ulist').innerHTML=users.map(u=>{
     const schoolName=u.school?schools.find(s=>s.code===u.school)?.name||u.school:'—';
+    const ppdName=u.ppd?ppds.find(p=>p.code===u.ppd)?.name||u.ppd:null;
     return `<div class="u-row">
       <div class="u-av ${avClass[u.role]||'av-t'}">${roleIcon[u.role]||'👤'}</div>
       <div class="u-info">
         <div class="u-name">${esc(u.display||u.username)}</div>
-        <div class="u-meta">@${esc(u.username)} · <span class="pill ${pillClass[u.role]}">${roleLabel[u.role]||u.role}</span>${u.school ? ` · 🏫 ${esc(schoolName)}` : ''}${u.ppd ? ` · 📋 ${esc(u.ppd)}` : ''}</div>
+        <div class="u-meta">@${esc(u.username)} · <span class="pill ${pillClass[u.role]}">${roleLabel[u.role]||u.role}</span>${u.school ? ` · 🏫 ${esc(schoolName)}` : ''}${ppdName ? ` · 📋 ${esc(ppdName)}` : ''}</div>
       </div>
       <div class="u-acts">
         <button class="btn btn-s btn-sm" onclick="openEdit('${esc(u.username)}')">✏️</button>
