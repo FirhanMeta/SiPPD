@@ -1240,7 +1240,354 @@ function exportPPDJSON() {
 }
 
 function printPPDReport() {
-  showToast('⚠ Monthly report coming in Step 4');
+  const records = window._ppdRecords || [];
+  if (!records.length) { showToast('⚠ No data to print'); return; }
+
+  const monthVal = document.getElementById('ppd-month').value;
+  const dateVal  = document.getElementById('ppd-date').value;
+  const label    = ppdMode === 'month' ? monthVal : dateVal;
+  const ppdName  = CU.ppd || '—';
+  const schools  = getSchools().filter(s => s.ppd_code === CU.ppd);
+  const genTime  = new Date().toLocaleString('en-MY');
+
+  // ── Aggregate totals ──────────────────────────────
+  const totE = records.reduce((a, r) => a + r.total_enrolled, 0);
+  const totP = records.reduce((a, r) => a + r.total_present, 0);
+  const totA = records.reduce((a, r) => a + r.total_absent,  0);
+  const overallRate = totE > 0 ? (totP / totE * 100).toFixed(1) : '0.0';
+  const subRate = records.length + ' / ' + schools.length;
+
+  // ── KPI buckets ───────────────────────────────────
+  const platinum     = records.filter(r => r.attendance_rate >= 95).sort((a,b) => b.attendance_rate - a.attendance_rate);
+  const gold         = records.filter(r => r.attendance_rate >= 90 && r.attendance_rate < 95).sort((a,b) => b.attendance_rate - a.attendance_rate);
+  const silver       = records.filter(r => r.attendance_rate >= 85 && r.attendance_rate < 90).sort((a,b) => b.attendance_rate - a.attendance_rate);
+  const intervention = records.filter(r => r.attendance_rate < 85).sort((a,b) => a.attendance_rate - b.attendance_rate);
+
+  // ── Class grouping helper (T1–T6 by first char) ───
+  function groupClasses(classrooms) {
+    const groups = {};
+    (classrooms || []).forEach(c => {
+      const key = c.name.charAt(0);
+      if (!groups[key]) groups[key] = { enrolled: 0, present: 0, absent: 0 };
+      groups[key].enrolled += c.enrolled;
+      groups[key].present  += c.present;
+      groups[key].absent   += c.absent;
+    });
+    return groups;
+  }
+
+  // ── CSS variables inlined for print isolation ─────
+  const navy  = '#0D2137';
+  const blue  = '#1A5F9C';
+  const green = '#1DB87A';
+  const amber = '#F0A500';
+  const red   = '#E63946';
+  const gold1 = '#d4af37';
+
+  function rateColor(r) {
+    return r >= 95 ? gold1 : r >= 90 ? blue : r >= 85 ? '#718096' : red;
+  }
+
+  function kpiBadge(r) {
+    if (r >= 95) return `<span style="background:rgba(212,175,55,.2);color:#8a6d00;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700">🏆 Platinum</span>`;
+    if (r >= 90) return `<span style="background:rgba(26,95,156,.15);color:${blue};padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700">🥇 Gold</span>`;
+    if (r >= 85) return `<span style="background:rgba(107,126,146,.15);color:#4a5568;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700">🥈 Silver</span>`;
+    return `<span style="background:rgba(230,57,70,.12);color:${red};padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700">🚨 Intervention</span>`;
+  }
+
+  function rankedTable(list) {
+    if (!list.length) return `<p style="color:#999;font-size:12px;padding:8px 0">No schools in this category.</p>`;
+    return `<table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr>
+        <th style="background:${navy};color:#fff;padding:7px 10px;text-align:left">#</th>
+        <th style="background:${navy};color:#fff;padding:7px 10px;text-align:left">School</th>
+        <th style="background:${navy};color:#fff;padding:7px 10px;text-align:left">Code</th>
+        <th style="background:${navy};color:#fff;padding:7px 10px;text-align:center">Present</th>
+        <th style="background:${navy};color:#fff;padding:7px 10px;text-align:center">Enrolled</th>
+        <th style="background:${navy};color:#fff;padding:7px 10px;text-align:center">Rate</th>
+      </tr></thead>
+      <tbody>${list.map((r,i) => `<tr style="background:${i%2===0?'#f8fafc':'#fff'}">
+        <td style="padding:7px 10px;font-weight:700;color:${navy}">${i+1}</td>
+        <td style="padding:7px 10px">${esc(r.school_name)}</td>
+        <td style="padding:7px 10px;font-family:monospace;color:#666">${r.school_code}</td>
+        <td style="padding:7px 10px;text-align:center;color:${green};font-weight:700">${r.total_present}</td>
+        <td style="padding:7px 10px;text-align:center">${r.total_enrolled}</td>
+        <td style="padding:7px 10px;text-align:center;font-weight:700;color:${rateColor(r.attendance_rate)}">${r.attendance_rate.toFixed(1)}%</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+
+  // ── Page style shared ─────────────────────────────
+  const pageStyle = `page-break-after:always;padding:16mm;font-family:'DM Sans',sans-serif;background:#fff;`;
+  const hdStyle   = `border-bottom:3px solid ${navy};padding-bottom:10px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end`;
+  const h1Style   = `font-size:18px;font-weight:700;color:${navy};margin:0 0 2px`;
+  const h2Style   = `font-size:14px;font-weight:700;color:${navy};margin:0 0 12px;border-left:4px solid ${blue};padding-left:8px`;
+  const metaStyle = `font-size:11px;color:#666;text-align:right`;
+
+  function pageHeader(title, subtitle) {
+    return `<div style="${hdStyle}">
+      <div>
+        <div style="${h1Style}">SiPPD Cloud System</div>
+        <div style="font-size:12px;color:#666;margin-top:2px">Unit Hal Ehwal Murid / Sektor Pembangunan Murid</div>
+      </div>
+      <div style="${metaStyle}">
+        <div style="font-size:15px;font-weight:700;color:${navy}">${esc(ppdName)}</div>
+        <div>${title}</div>
+        <div>${subtitle}</div>
+        <div style="margin-top:2px">Dijana: ${genTime}</div>
+      </div>
+    </div>`;
+  }
+
+  // ══ PAGE 1: Cover ═════════════════════════════════
+  const page1 = `<div style="${pageStyle}display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:190mm">
+    <div style="text-align:center;max-width:180mm">
+      <div style="font-size:48px;margin-bottom:16px">📊</div>
+      <div style="font-size:11px;font-weight:700;color:${blue};letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Laporan Rasmi Kehadiran Murid</div>
+      <div style="font-size:28px;font-weight:700;color:${navy};margin-bottom:6px">SiPPD Cloud System</div>
+      <div style="font-size:16px;color:#555;margin-bottom:24px">Unit Hal Ehwal Murid / Sektor Pembangunan Murid</div>
+      <div style="background:${navy};color:#fff;border-radius:12px;padding:20px 32px;display:inline-block;margin-bottom:24px">
+        <div style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:4px">PPD</div>
+        <div style="font-size:22px;font-weight:700">${esc(ppdName)}</div>
+        <div style="font-size:14px;color:rgba(255,255,255,.7);margin-top:6px">${ppdMode === 'month' ? 'Laporan Bulanan: ' + monthVal : 'Laporan Harian: ' + dateVal}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:8px">
+        <div style="border:1.5px solid #dde;border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:22px;font-weight:700;color:${navy}">${overallRate}%</div>
+          <div style="font-size:10px;color:#888;margin-top:2px">Kadar Kehadiran</div>
+        </div>
+        <div style="border:1.5px solid #dde;border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:22px;font-weight:700;color:${green}">${totP}</div>
+          <div style="font-size:10px;color:#888;margin-top:2px">Hadir</div>
+        </div>
+        <div style="border:1.5px solid #dde;border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:22px;font-weight:700;color:${navy}">${totE}</div>
+          <div style="font-size:10px;color:#888;margin-top:2px">Enrolmen</div>
+        </div>
+        <div style="border:1.5px solid #dde;border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:22px;font-weight:700;color:${blue}">${subRate}</div>
+          <div style="font-size:10px;color:#888;margin-top:2px">Sekolah Hantar</div>
+        </div>
+      </div>
+      <div style="margin-top:32px;font-size:11px;color:#aaa">Dijana secara automatik oleh SiPPD Cloud System · ${genTime}</div>
+    </div>
+  </div>`;
+
+  // ══ PAGE 2: KPI Legend ════════════════════════════
+  const page2 = `<div style="${pageStyle}">
+    ${pageHeader('Legenda KPI', ppdMode === 'month' ? monthVal : dateVal)}
+    <div style="${h2Style}">Tahap Prestasi KPI Kehadiran</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px">
+      <div style="border:2px solid ${gold1};border-radius:12px;padding:20px;background:rgba(212,175,55,.08)">
+        <div style="font-size:28px;margin-bottom:8px">🏆</div>
+        <div style="font-size:18px;font-weight:700;color:#8a6d00;margin-bottom:4px">Platinum</div>
+        <div style="font-size:32px;font-weight:700;color:${navy};margin-bottom:8px">≥ 95%</div>
+        <div style="font-size:12px;color:#666">Pencapaian tertinggi. Sekolah mencapai tahap kehadiran cemerlang melebihi 95%.</div>
+        <div style="margin-top:10px;font-size:12px;font-weight:700;color:#8a6d00">${platinum.length} sekolah</div>
+      </div>
+      <div style="border:2px solid ${blue};border-radius:12px;padding:20px;background:rgba(26,95,156,.06)">
+        <div style="font-size:28px;margin-bottom:8px">🥇</div>
+        <div style="font-size:18px;font-weight:700;color:${blue};margin-bottom:4px">Gold</div>
+        <div style="font-size:32px;font-weight:700;color:${navy};margin-bottom:8px">90% – 94.9%</div>
+        <div style="font-size:12px;color:#666">Pencapaian tinggi. Sekolah mengekalkan kehadiran pada tahap yang baik.</div>
+        <div style="margin-top:10px;font-size:12px;font-weight:700;color:${blue}">${gold.length} sekolah</div>
+      </div>
+      <div style="border:2px solid #718096;border-radius:12px;padding:20px;background:rgba(107,126,146,.06)">
+        <div style="font-size:28px;margin-bottom:8px">🥈</div>
+        <div style="font-size:18px;font-weight:700;color:#4a5568;margin-bottom:4px">Silver</div>
+        <div style="font-size:32px;font-weight:700;color:${navy};margin-bottom:8px">85% – 89.9%</div>
+        <div style="font-size:12px;color:#666">Pencapaian sederhana. Sekolah perlu meningkatkan usaha pengurusan kehadiran.</div>
+        <div style="margin-top:10px;font-size:12px;font-weight:700;color:#4a5568">${silver.length} sekolah</div>
+      </div>
+      <div style="border:2px solid ${red};border-radius:12px;padding:20px;background:rgba(230,57,70,.06)">
+        <div style="font-size:28px;margin-bottom:8px">🚨</div>
+        <div style="font-size:18px;font-weight:700;color:${red};margin-bottom:4px">Intervensi</div>
+        <div style="font-size:32px;font-weight:700;color:${navy};margin-bottom:8px">&lt; 85%</div>
+        <div style="font-size:12px;color:#666">Memerlukan tindakan segera. Sekolah perlu mengemukakan justifikasi dan pelan intervensi.</div>
+        <div style="margin-top:10px;font-size:12px;font-weight:700;color:${red}">${intervention.length} sekolah</div>
+      </div>
+    </div>
+  </div>`;
+
+  // ══ PAGE 3: Intervention Table ════════════════════
+  const page3 = `<div style="${pageStyle}">
+    ${pageHeader('Jadual Intervensi', ppdMode === 'month' ? monthVal : dateVal)}
+    <div style="${h2Style}">Sekolah Memerlukan Intervensi (Kadar &lt; 85%)</div>
+    ${intervention.length === 0
+      ? `<div style="text-align:center;padding:40px;color:${green};font-size:16px;font-weight:700">✅ Tiada sekolah dalam kategori intervensi</div>`
+      : `<table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead><tr>
+          <th style="background:${red};color:#fff;padding:8px 10px;text-align:left">Sekolah</th>
+          <th style="background:${red};color:#fff;padding:8px 10px;text-align:center">Kadar</th>
+          <th style="background:${red};color:#fff;padding:8px 10px;text-align:center">Hadir</th>
+          <th style="background:${red};color:#fff;padding:8px 10px;text-align:center">Enrolmen</th>
+          <th style="background:${red};color:#fff;padding:8px 10px;text-align:center">Kelas T1</th>
+          <th style="background:${red};color:#fff;padding:8px 10px;text-align:center">Kelas T2</th>
+          <th style="background:${red};color:#fff;padding:8px 10px;text-align:center">Kelas T3</th>
+          <th style="background:${red};color:#fff;padding:8px 10px;text-align:center">Kelas T4</th>
+          <th style="background:${red};color:#fff;padding:8px 10px;text-align:center">Kelas T5</th>
+          <th style="background:${red};color:#fff;padding:8px 10px;text-align:center">Kelas T6</th>
+          <th style="background:${red};color:#fff;padding:8px 10px">Justifikasi</th>
+          <th style="background:${red};color:#fff;padding:8px 10px">Intervensi</th>
+        </tr></thead>
+        <tbody>${intervention.map((r,i) => {
+          const grp = groupClasses(r.classrooms);
+          const tiers = ['1','2','3','4','5','6'];
+          return `<tr style="background:${i%2===0?'#fff8f8':'#fff'}">
+            <td style="padding:8px 10px;font-weight:600;border-bottom:1px solid #fcc">${esc(r.school_name)}<br><span style="font-size:10px;color:#999;font-family:monospace">${r.school_code}</span></td>
+            <td style="padding:8px 10px;text-align:center;font-weight:700;color:${red};border-bottom:1px solid #fcc">${r.attendance_rate.toFixed(1)}%</td>
+            <td style="padding:8px 10px;text-align:center;border-bottom:1px solid #fcc">${r.total_present}</td>
+            <td style="padding:8px 10px;text-align:center;border-bottom:1px solid #fcc">${r.total_enrolled}</td>
+            ${tiers.map(t => {
+              const g = grp[t];
+              return `<td style="padding:8px 10px;text-align:center;border-bottom:1px solid #fcc;font-size:10px">${g ? (g.present+'/'+g.enrolled) : '—'}</td>`;
+            }).join('')}
+            <td style="padding:8px 10px;border-bottom:1px solid #fcc;min-width:80px">&nbsp;</td>
+            <td style="padding:8px 10px;border-bottom:1px solid #fcc;min-width:80px">&nbsp;</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`
+    }
+  </div>`;
+
+  // ══ PAGE 4: Platinum ══════════════════════════════
+  const page4 = `<div style="${pageStyle}">
+    ${pageHeader('Sekolah Platinum ≥ 95%', ppdMode === 'month' ? monthVal : dateVal)}
+    <div style="${h2Style}">🏆 Platinum — Kadar Kehadiran ≥ 95%</div>
+    ${rankedTable(platinum)}
+  </div>`;
+
+  // ══ PAGE 5: Gold ══════════════════════════════════
+  const page5 = `<div style="${pageStyle}">
+    ${pageHeader('Sekolah Gold 90–94.9%', ppdMode === 'month' ? monthVal : dateVal)}
+    <div style="${h2Style}">🥇 Gold — Kadar Kehadiran 90% hingga 94.9%</div>
+    ${rankedTable(gold)}
+  </div>`;
+
+  // ══ PAGE 6: Silver ════════════════════════════════
+  const page6 = `<div style="${pageStyle}">
+    ${pageHeader('Sekolah Silver 85–89.9%', ppdMode === 'month' ? monthVal : dateVal)}
+    <div style="${h2Style}">🥈 Silver — Kadar Kehadiran 85% hingga 89.9%</div>
+    ${rankedTable(silver)}
+  </div>`;
+
+  // ══ PAGE 7: Overall Analysis ══════════════════════
+  const skRecords  = records.filter(r => (r.school_type||'').toUpperCase() === 'SK');
+  const skE = skRecords.reduce((a,r) => a + r.total_enrolled, 0);
+  const skP = skRecords.reduce((a,r) => a + r.total_present, 0);
+  const skRate = skE > 0 ? (skP / skE * 100).toFixed(1) : '—';
+
+  const page7 = `<div style="${pageStyle}">
+    ${pageHeader('Analisis Keseluruhan', ppdMode === 'month' ? monthVal : dateVal)}
+    <div style="${h2Style}">Analisis Keseluruhan Kehadiran PPD</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+      <div style="border:1.5px solid #dde;border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:11px;color:#888;font-weight:700;text-transform:uppercase;margin-bottom:4px">Kadar PPD</div>
+        <div style="font-size:28px;font-weight:700;color:${navy}">${overallRate}%</div>
+      </div>
+      <div style="border:1.5px solid #dde;border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:11px;color:#888;font-weight:700;text-transform:uppercase;margin-bottom:4px">Kadar SK</div>
+        <div style="font-size:28px;font-weight:700;color:${blue}">${skRate}%</div>
+      </div>
+      <div style="border:1.5px solid #dde;border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:11px;color:#888;font-weight:700;text-transform:uppercase;margin-bottom:4px">Jumlah Hadir</div>
+        <div style="font-size:28px;font-weight:700;color:${green}">${totP}</div>
+      </div>
+      <div style="border:1.5px solid #dde;border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:11px;color:#888;font-weight:700;text-transform:uppercase;margin-bottom:4px">Jumlah Enrolmen</div>
+        <div style="font-size:28px;font-weight:700;color:${navy}">${totE}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+      <div style="border:1.5px solid #fcc;border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:11px;color:#888;font-weight:700;text-transform:uppercase;margin-bottom:4px">Jumlah Tidak Hadir</div>
+        <div style="font-size:28px;font-weight:700;color:${red}">${totA}</div>
+      </div>
+      <div style="border:1.5px solid #dde;border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:11px;color:#888;font-weight:700;text-transform:uppercase;margin-bottom:4px">Kadar Penyerahan</div>
+        <div style="font-size:28px;font-weight:700;color:${blue}">${subRate}</div>
+      </div>
+      <div style="border:1.5px solid #fcc;border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:11px;color:#888;font-weight:700;text-transform:uppercase;margin-bottom:4px">Sekolah Intervensi</div>
+        <div style="font-size:28px;font-weight:700;color:${red}">${intervention.length}</div>
+      </div>
+    </div>
+    <div style="${h2Style}">Ringkasan Mengikut Kategori KPI</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr>
+        <th style="background:${navy};color:#fff;padding:8px 12px;text-align:left">Kategori</th>
+        <th style="background:${navy};color:#fff;padding:8px 12px;text-align:center">Bil. Sekolah</th>
+        <th style="background:${navy};color:#fff;padding:8px 12px;text-align:center">Peratus</th>
+      </tr></thead>
+      <tbody>
+        <tr style="background:#fffbee"><td style="padding:8px 12px">🏆 Platinum (≥95%)</td><td style="text-align:center;font-weight:700;color:#8a6d00">${platinum.length}</td><td style="text-align:center">${records.length ? (platinum.length/records.length*100).toFixed(0)+'%' : '—'}</td></tr>
+        <tr><td style="padding:8px 12px">🥇 Gold (90–94.9%)</td><td style="text-align:center;font-weight:700;color:${blue}">${gold.length}</td><td style="text-align:center">${records.length ? (gold.length/records.length*100).toFixed(0)+'%' : '—'}</td></tr>
+        <tr style="background:#f8fafc"><td style="padding:8px 12px">🥈 Silver (85–89.9%)</td><td style="text-align:center;font-weight:700;color:#4a5568">${silver.length}</td><td style="text-align:center">${records.length ? (silver.length/records.length*100).toFixed(0)+'%' : '—'}</td></tr>
+        <tr><td style="padding:8px 12px">🚨 Intervensi (&lt;85%)</td><td style="text-align:center;font-weight:700;color:${red}">${intervention.length}</td><td style="text-align:center">${records.length ? (intervention.length/records.length*100).toFixed(0)+'%' : '—'}</td></tr>
+      </tbody>
+    </table>
+  </div>`;
+
+  // ══ PAGE 8: SK Breakdown Table ════════════════════
+  // Group all class levels across all schools
+  const allLevels = new Set();
+  records.forEach(r => (r.classrooms||[]).forEach(c => allLevels.add(c.name.charAt(0))));
+  const levels = [...allLevels].sort();
+
+  const page8 = `<div style="${pageStyle}">
+    ${pageHeader('Jadual Pecahan SK', ppdMode === 'month' ? monthVal : dateVal)}
+    <div style="${h2Style}">Pecahan Kehadiran Mengikut Kelas & Sekolah</div>
+    <div style="overflow-x:auto">
+      <table style="border-collapse:collapse;font-size:10px;min-width:100%">
+        <thead>
+          <tr>
+            <th style="background:${navy};color:#fff;padding:6px 8px;text-align:left;white-space:nowrap;position:sticky;left:0">Tahap</th>
+            ${records.map(r => `<th style="background:${navy};color:#fff;padding:6px 8px;text-align:center;white-space:nowrap;max-width:80px;overflow:hidden">${esc(r.school_name.replace(/^(SK|SMK|SJKC|SJKT|SABK|SMKA)\s*/i,''))}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${levels.map((lv,li) => `<tr style="background:${li%2===0?'#f8fafc':'#fff'}">
+            <td style="padding:6px 8px;font-weight:700;color:${navy};white-space:nowrap;position:sticky;left:0;background:inherit">T${lv}</td>
+            ${records.map(r => {
+              const grp = groupClasses(r.classrooms);
+              const g = grp[lv];
+              if (!g) return `<td style="padding:6px 8px;text-align:center;color:#ccc">—</td>`;
+              const rate = g.enrolled > 0 ? (g.present / g.enrolled * 100).toFixed(1) : 0;
+              const bg = parseFloat(rate) >= 95 ? 'rgba(212,175,55,.2)' : parseFloat(rate) >= 90 ? 'rgba(26,95,156,.1)' : parseFloat(rate) >= 85 ? 'rgba(107,126,146,.1)' : 'rgba(230,57,70,.12)';
+              return `<td style="padding:6px 8px;text-align:center;font-weight:700;color:${rateColor(parseFloat(rate))};background:${bg}">${rate}%</td>`;
+            }).join('')}
+          </tr>`).join('')}
+          <tr style="background:${navy}">
+            <td style="padding:6px 8px;font-weight:700;color:#fff;position:sticky;left:0;background:${navy}">JUMLAH</td>
+            ${records.map(r => `<td style="padding:6px 8px;text-align:center;font-weight:700;color:${rateColor(r.attendance_rate)}">${r.attendance_rate.toFixed(1)}%</td>`).join('')}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+
+  // ── Inject & print ────────────────────────────────
+  let printDiv = document.getElementById('print-area-ppd');
+  if (!printDiv) {
+    printDiv = document.createElement('div');
+    printDiv.id = 'print-area-ppd';
+    document.body.appendChild(printDiv);
+  }
+
+  printDiv.innerHTML = `
+    <style>
+      @page { size: A4 landscape; margin: 0; }
+      @media print {
+        body > *:not(#print-area-ppd) { display: none !important; }
+        #print-area-ppd { display: block !important; }
+      }
+      #print-area-ppd { display: none; font-family: 'DM Sans', sans-serif; }
+    </style>
+    ${page1}${page2}${page3}${page4}${page5}${page6}${page7}${page8}
+  `;
+
+  // Small delay so browser renders the DOM before printing
+  setTimeout(() => window.print(), 150);
 }
 // ══════════════════════════════════════════════════
 // CALENDAR HELPERS
