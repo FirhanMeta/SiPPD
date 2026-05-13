@@ -2029,16 +2029,25 @@ async function saveSetupToSupabase(code, classes) {
   if (!cfg.url || !cfg.key) return { ok: false };
   
   try {
-    // First, delete existing records for this school
-    const deleteRes = await fetch(`${cfg.url}/rest/v1/class_setup?school_code=eq.${code}`, {
-      method: 'DELETE',
+    // Use PATCH to update existing record, or it will insert if not found
+    const res = await fetch(`${cfg.url}/rest/v1/class_setup?school_code=eq.${code}`, {
+      method: 'PATCH',
       headers: {
         'apikey': cfg.key,
         'Authorization': 'Bearer ' + cfg.key,
-      }
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ 
+        classes, 
+        updated_at: new Date().toISOString() 
+      }),
     });
     
-    // Then insert the new data
+    // If PATCH succeeded, we're done
+    if (res.ok) return { ok: true };
+    
+    // If record doesn't exist (404), then INSERT it
     const insertRes = await fetch(`${cfg.url}/rest/v1/class_setup`, {
       method: 'POST',
       headers: {
