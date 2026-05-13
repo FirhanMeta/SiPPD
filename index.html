@@ -2257,7 +2257,7 @@ function loadAdminUsers(){
       <div class="u-av ${avClass[u.role]||'av-t'}">${roleIcon[u.role]||'👤'}</div>
       <div class="u-info">
         <div class="u-name">${esc(u.display||u.username)}</div>
-        <div class="u-meta">@${esc(u.username)} · <span class="pill ${pillClass[u.role]}">${roleLabel[u.role]||u.role}</span>${u.school?` · 🏫 ${esc(schoolName)}`:''}</div>
+        <div class="u-meta">@${esc(u.username)} · <span class="pill ${pillClass[u.role]}">${roleLabel[u.role]||u.role}</span>${u.school ? ` · 🏫 ${esc(schoolName)}` : ''}${u.ppd ? ` · 📋 ${esc(u.ppd)}` : ''}</div>
       </div>
       <div class="u-acts">
         <button class="btn btn-s btn-sm" onclick="openEdit('${esc(u.username)}')">✏️</button>
@@ -3180,12 +3180,26 @@ function populatePPDSelect(elId, selected = '') {
 document.addEventListener('DOMContentLoaded', async () => {
   initDefaults();
 
-  // Auto-load Supabase config from server env vars
+  // ── Restore session FIRST so screen never stays blank ──
+  const saved = localStorage.getItem('sars_session');
+  if (saved) {
+    try {
+      CU = JSON.parse(saved);
+      showLanding();
+    } catch {
+      localStorage.removeItem('sars_session');
+      showScreen('screen-login');
+    }
+  } else {
+    showScreen('screen-login');
+  }
+
+  // ── Then sync Supabase data in background ──
   try {
     const res = await fetch('/api/supaconfig');
     const cfg = await res.json();
     if (cfg.url && cfg.key) {
-      saveSupaConf(cfg); // saves to localStorage for rest of session
+      saveSupaConf(cfg);
 
       const [remoteUsers, remoteSchools, remoteJPN, remotePPD] = await Promise.all([
         getUsersFromSupabase(),
@@ -3201,19 +3215,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   } catch(e) {
     console.warn('Auto Supabase config failed:', e);
-  }
-
-  const saved = localStorage.getItem('sars_session');
-  if (saved) {
-    try {
-      CU = JSON.parse(saved);
-      showLanding();
-    } catch {
-      localStorage.removeItem('sars_session');
-      showScreen('screen-login');
-    }
-  } else {
-    showScreen('screen-login');
   }
 });
 </script>
