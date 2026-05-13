@@ -2029,26 +2029,8 @@ async function saveSetupToSupabase(code, classes) {
   if (!cfg.url || !cfg.key) return { ok: false };
   
   try {
-    // Use PATCH to update existing record, or it will insert if not found
-    const res = await fetch(`${cfg.url}/rest/v1/class_setup?school_code=eq.${code}`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': cfg.key,
-        'Authorization': 'Bearer ' + cfg.key,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal',
-      },
-      body: JSON.stringify({ 
-        classes, 
-        updated_at: new Date().toISOString() 
-      }),
-    });
-    
-    // If PATCH succeeded, we're done
-    if (res.ok) return { ok: true };
-    
-    // If record doesn't exist (404), then INSERT it
-    const insertRes = await fetch(`${cfg.url}/rest/v1/class_setup`, {
+    // Always INSERT a new record with current timestamp
+    const res = await fetch(`${cfg.url}/rest/v1/class_setup`, {
       method: 'POST',
       headers: {
         'apikey': cfg.key,
@@ -2058,11 +2040,13 @@ async function saveSetupToSupabase(code, classes) {
       body: JSON.stringify({ 
         school_code: code, 
         classes, 
-        updated_at: new Date().toISOString() 
+        updated_at: new Date().toISOString(),
+        // Add a unique ID or timestamp to prevent conflicts
+        saved_at: new Date().toISOString()
       }),
     });
     
-    return { ok: insertRes.ok };
+    return { ok: res.ok };
   } catch(e) {
     return { ok: false, error: e.message };
   }
