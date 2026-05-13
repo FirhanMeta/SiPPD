@@ -2024,22 +2024,39 @@ async function getPPDFromSupabase(){
 // ══════════════════════════════════════════════════
 // CLASS SETUP SUPABASE
 // ══════════════════════════════════════════════════
-async function saveSetupToSupabase(code, classes){
-  const cfg=getSupaConfig();
-  if(!cfg.url||!cfg.key) return {ok:false};
-  try{
-    const res=await fetch(`${cfg.url}/rest/v1/class_setup`,{
-      method:'POST',
-      headers:{
-        'apikey':cfg.key,
-        'Authorization':'Bearer '+cfg.key,
-        'Content-Type':'application/json',
-        'Prefer':'resolution=merge-duplicates',
-      },
-      body:JSON.stringify({school_code:code,classes,updated_at:new Date().toISOString()}),
+async function saveSetupToSupabase(code, classes) {
+  const cfg = getSupaConfig();
+  if (!cfg.url || !cfg.key) return { ok: false };
+  
+  try {
+    // First, delete existing records for this school
+    const deleteRes = await fetch(`${cfg.url}/rest/v1/class_setup?school_code=eq.${code}`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': cfg.key,
+        'Authorization': 'Bearer ' + cfg.key,
+      }
     });
-    return {ok:res.ok};
-  } catch(e){ return {ok:false,error:e.message}; }
+    
+    // Then insert the new data
+    const insertRes = await fetch(`${cfg.url}/rest/v1/class_setup`, {
+      method: 'POST',
+      headers: {
+        'apikey': cfg.key,
+        'Authorization': 'Bearer ' + cfg.key,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        school_code: code, 
+        classes, 
+        updated_at: new Date().toISOString() 
+      }),
+    });
+    
+    return { ok: insertRes.ok };
+  } catch(e) {
+    return { ok: false, error: e.message };
+  }
 }
 
 async function loadSetupFromSupabase(code){
