@@ -806,20 +806,91 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   </div>
 
   <!-- FILTER BAR -->
-  <div style="background:var(--surf);border-bottom:1px solid var(--bdr);padding:10px 16px;display:flex;gap:8px;align-items:center;position:sticky;top:56px;z-index:90">
+  <<div style="background:var(--surf);border-bottom:1px solid var(--bdr);padding:10px 16px;display:flex;gap:8px;align-items:center;position:sticky;top:56px;z-index:90">
     <div style="display:flex;background:var(--lite);border-radius:8px;border:1.5px solid var(--bdr);overflow:hidden;flex-shrink:0">
-      <button id="ppd-tab-day" onclick="ppdToggle('day')" style="padding:7px 14px;font-size:12px;font-weight:700;font-family:var(--font);border:none;cursor:pointer;background:var(--navy);color:#fff;transition:all .2s">Daily</button>
+      <button id="ppd-tab-overview" onclick="ppdToggle('overview')" style="padding:7px 14px;font-size:12px;font-weight:700;font-family:var(--font);border:none;cursor:pointer;background:var(--navy);color:#fff;transition:all .2s">Overview</button>
+      <button id="ppd-tab-day" onclick="ppdToggle('day')" style="padding:7px 14px;font-size:12px;font-weight:700;font-family:var(--font);border:none;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s">Daily</button>
       <button id="ppd-tab-month" onclick="ppdToggle('month')" style="padding:7px 14px;font-size:12px;font-weight:700;font-family:var(--font);border:none;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s">Monthly</button>
     </div>
-    <input type="date" class="fc" id="ppd-date" onchange="loadPPDDashboard()" style="flex:1;padding:8px 12px;font-size:13px">
+    <input type="date" class="fc" id="ppd-date" onchange="loadPPDDashboard()" style="flex:1;padding:8px 12px;font-size:13px;display:none">
     <input type="month" class="fc" id="ppd-month" onchange="loadPPDDashboard()" style="flex:1;padding:8px 12px;font-size:13px;display:none">
-    <button class="btn btn-s btn-sm" onclick="exportPPDJSON()">⬇</button>
-    <button class="btn btn-p btn-sm" onclick="printPPDReport()">🖨</button>
+    <button class="btn btn-s btn-sm" id="ppd-btn-export" onclick="exportPPDJSON()" style="display:none">⬇</button>
+    <button class="btn btn-p btn-sm" id="ppd-btn-print" onclick="printPPDReport()" style="display:none">🖨</button>
   </div>
 
   <div class="content" style="padding-bottom:24px">
 
     <!-- KPI SUMMARY -->
+      <!-- PPD OVERVIEW PANEL -->
+  <div id="ppd-overview-panel" style="display:block">
+
+    <div style="background:var(--navy);border-radius:var(--r);padding:18px 20px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">PPD District</div>
+      <div style="font-size:20px;font-weight:700;color:#fff" id="ov-ppd-name">—</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.45);margin-top:3px" id="ov-ppd-sub">Loading…</div>
+    </div>
+
+    <div class="sec-title">Today's Snapshot — <span id="ov-day-date">—</span></div>
+    <div class="sgrid ai">
+      <div class="scard accent">
+        <div class="slabel">Daily Rate</div>
+        <div class="sval" id="ov-day-rate">—</div>
+        <div class="ssub">of <span id="ov-day-enrolled">—</span> enrolled</div>
+      </div>
+      <div class="scard">
+        <div class="slabel">Present Today</div>
+        <div class="sval" id="ov-day-present">—</div>
+        <div class="ssub">students attending</div>
+      </div>
+      <div class="scard">
+        <div class="slabel">Submitted</div>
+        <div class="sval" id="ov-day-submitted">—</div>
+        <div class="ssub">of <span id="ov-day-total">—</span> schools</div>
+      </div>
+      <div class="scard">
+        <div class="slabel">Not Submitted</div>
+        <div class="sval" id="ov-day-missing" style="color:var(--red)">—</div>
+        <div class="ssub">pending today</div>
+      </div>
+    </div>
+
+    <div class="sec-title">This Month — <span id="ov-month-label">—</span></div>
+    <div class="sgrid ai">
+      <div class="scard accent">
+        <div class="slabel">Avg Monthly Rate</div>
+        <div class="sval" id="ov-month-rate">—</div>
+        <div class="ssub">across submitted schools</div>
+      </div>
+      <div class="scard">
+        <div class="slabel">Total Hadir</div>
+        <div class="sval" id="ov-month-present">—</div>
+        <div class="ssub">of <span id="ov-month-enrolled">—</span> enrolled</div>
+      </div>
+      <div class="scard">
+        <div class="slabel">Days Recorded</div>
+        <div class="sval" id="ov-month-days">—</div>
+        <div class="ssub">school days this month</div>
+      </div>
+      <div class="scard">
+        <div class="slabel">Intervention</div>
+        <div class="sval" id="ov-month-intervention" style="color:var(--red)">—</div>
+        <div class="ssub">schools &lt; 85%</div>
+      </div>
+    </div>
+
+    <div class="sec-title">School Performance This Month</div>
+    <div id="ov-school-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+    <div id="ov-empty" class="empty" style="display:none">
+      <div class="empty-icon">📭</div>
+      <h3>No submissions yet</h3>
+      <p>No schools have submitted this month.</p>
+    </div>
+
+    <button class="btn btn-p btn-full ai" onclick="printPPDOverview()" style="margin-bottom:80px">
+      🖨 Print Overview Report
+    </button>
+  </div>
+  <!-- END PPD OVERVIEW PANEL -->
     <div class="sgrid ai" id="ppd-stats">
       <div class="scard accent">
         <div class="slabel">PPD Rate</div>
@@ -993,15 +1064,289 @@ function openPPD() {
 
 function ppdToggle(mode) {
   ppdMode = mode;
-  document.getElementById('ppd-tab-day').style.background = mode === 'day' ? 'var(--navy)' : 'transparent';
-  document.getElementById('ppd-tab-day').style.color = mode === 'day' ? '#fff' : 'var(--muted)';
-  document.getElementById('ppd-tab-month').style.background = mode === 'month' ? 'var(--navy)' : 'transparent';
-  document.getElementById('ppd-tab-month').style.color = mode === 'month' ? '#fff' : 'var(--muted)';
-  document.getElementById('ppd-date').style.display = mode === 'day' ? 'block' : 'none';
+
+  ['overview','day','month'].forEach(t => {
+    const btn = document.getElementById('ppd-tab-' + t);
+    if (!btn) return;
+    btn.style.background = mode === t ? 'var(--navy)' : 'transparent';
+    btn.style.color      = mode === t ? '#fff' : 'var(--muted)';
+  });
+ 
+  // Date pickers only show on day/month tabs
+  document.getElementById('ppd-date').style.display  = mode === 'day'   ? 'block' : 'none';
   document.getElementById('ppd-month').style.display = mode === 'month' ? 'block' : 'none';
-  loadPPDDashboard();
+
+  // Export/print buttons only on day/month tabs
+  document.getElementById('ppd-btn-export').style.display = mode !== 'overview' ? 'inline-flex' : 'none';
+  document.getElementById('ppd-btn-print').style.display  = mode !== 'overview' ? 'inline-flex' : 'none';
+
+  // Panel visibility
+  document.getElementById('ppd-overview-panel').style.display = mode === 'overview' ? 'block' : 'none';
+  document.getElementById('ppd-stats').style.display           = mode !== 'overview' ? 'grid'  : 'none';
+  document.getElementById('ppd-empty').style.display           = 'none';
+
+  const cardEl = document.getElementById('ppd-cards');
+  if (cardEl) cardEl.style.display = mode !== 'overview' ? 'flex' : 'none';
+
+  if (mode === 'overview') loadPPDOverview();
+  else loadPPDDashboard();
 }
 
+async function loadPPDOverview() {
+  const ppd = CU.ppd;
+  const cfg = getSupaConfig();
+  if (!cfg.url || !cfg.key) { showToast('⚠ Supabase not configured'); return; }
+
+  const schools = getSchools().filter(s => s.ppd_code === ppd);
+  const codes   = schools.map(s => s.code);
+
+  document.getElementById('ov-ppd-name').textContent = CU.display || ppd;
+  document.getElementById('ov-ppd-sub').textContent  = ppd + ' · ' + schools.length + ' schools registered';
+  document.getElementById('ov-day-total').textContent = schools.length;
+
+  if (!codes.length) {
+    document.getElementById('ov-empty').style.display = 'block';
+    return;
+  }
+
+  const dateStr   = new Date().toISOString().slice(0, 10);
+  const yr        = dateStr.slice(0, 4);
+  const mo        = dateStr.slice(5, 7);
+  const startDate = `${yr}-${mo}-01`;
+  const endDate   = `${yr}-${mo}-${new Date(yr, mo, 0).getDate()}`;
+
+  document.getElementById('ov-day-date').textContent   = fmtDate(dateStr);
+  document.getElementById('ov-month-label').textContent = yr + '-' + mo;
+
+  try {
+    const [dayRes, monthRes] = await Promise.all([
+      fetch(
+        `${cfg.url}/rest/v1/attendance?date=eq.${dateStr}&school_code=in.(${codes.join(',')})`,
+        { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key } }
+      ),
+      fetch(
+        `${cfg.url}/rest/v1/attendance?date=gte.${startDate}&date=lte.${endDate}&school_code=in.(${codes.join(',')})&order=school_code`,
+        { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key } }
+      )
+    ]);
+
+    // ── Today snapshot ──
+    if (dayRes.ok) {
+      const dayData = await dayRes.json();
+      const dayE    = dayData.reduce((a, r) => a + r.total_enrolled, 0);
+      const dayP    = dayData.reduce((a, r) => a + r.total_present,  0);
+      const dayRate = dayE > 0 ? (dayP / dayE * 100).toFixed(1) + '%' : '—';
+      document.getElementById('ov-day-rate').textContent      = dayData.length ? dayRate : '—';
+      document.getElementById('ov-day-present').textContent   = dayData.length ? dayP    : '—';
+      document.getElementById('ov-day-enrolled').textContent  = dayData.length ? dayE    : '—';
+      document.getElementById('ov-day-submitted').textContent = dayData.length;
+      document.getElementById('ov-day-missing').textContent   = schools.length - dayData.length;
+    }
+
+    // ── Monthly performance ──
+    if (monthRes.ok) {
+      const raw = await monthRes.json();
+      const map = {};
+      raw.forEach(r => {
+        if (!map[r.school_code]) {
+          map[r.school_code] = {
+            school_code: r.school_code, school_name: r.school_name,
+            school_type: r.school_type || '', total_enrolled: r.total_enrolled,
+            total_present: 0, total_absent: 0,
+            days: 0, rate_sum: 0,
+            submitted_at: r.submitted_at, submitted_by: r.submitted_by
+          };
+        }
+        const m = map[r.school_code];
+        m.total_enrolled  = r.total_enrolled;
+        m.total_present  += r.total_present;
+        m.total_absent   += r.total_absent;
+        m.days           += 1;
+        m.rate_sum       += parseFloat(r.attendance_rate);
+        if (r.submitted_at > m.submitted_at) {
+          m.submitted_at = r.submitted_at;
+          m.submitted_by = r.submitted_by;
+        }
+      });
+
+      const schoolRecords = Object.values(map).map(s => ({
+        ...s,
+        attendance_rate: s.days > 0 ? parseFloat((s.rate_sum / s.days).toFixed(2)) : 0
+      })).sort((a, b) => b.attendance_rate - a.attendance_rate);
+
+      const totP        = schoolRecords.reduce((a, r) => a + r.total_present,  0);
+      const totE        = schoolRecords.reduce((a, r) => a + r.total_enrolled,  0);
+      const avgRate     = schoolRecords.length > 0
+        ? (schoolRecords.reduce((a, r) => a + r.attendance_rate, 0) / schoolRecords.length).toFixed(1) : null;
+      const maxDays     = raw.length ? Math.max(...Object.values(map).map(s => s.days)) : 0;
+      const intervention = schoolRecords.filter(r => r.attendance_rate < 85).length;
+
+      document.getElementById('ov-month-rate').textContent         = avgRate ? avgRate + '%' : '—';
+      document.getElementById('ov-month-present').textContent      = totP || '—';
+      document.getElementById('ov-month-enrolled').textContent     = totE || '—';
+      document.getElementById('ov-month-days').textContent         = maxDays || '—';
+      document.getElementById('ov-month-intervention').textContent = schoolRecords.length ? intervention : '—';
+
+      // School performance list
+      const missingSchools = schools.filter(s => !map[s.code]);
+      const rateColor = r => r >= 95 ? '#d4af37' : r >= 90 ? 'var(--blue)' : r >= 85 ? '#718096' : 'var(--red)';
+
+      const listEl = document.getElementById('ov-school-list');
+      if (!schoolRecords.length && !missingSchools.length) {
+        document.getElementById('ov-empty').style.display = 'block';
+        listEl.innerHTML = '';
+        return;
+      }
+
+      listEl.innerHTML = schoolRecords.map((r, i) => {
+        const kpi  = kpiLevel(r.attendance_rate);
+        const barW = Math.min(r.attendance_rate, 100).toFixed(1);
+        return `
+        <div class="card ai" style="margin-bottom:0">
+          <div class="card-body" style="padding:12px 16px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <div style="font-size:16px;font-weight:700;color:var(--muted);font-family:var(--mono);width:24px;flex-shrink:0">${i+1}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:700;color:var(--navy)">${esc(r.school_name)}</div>
+                <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${r.school_code}${r.school_type ? ' · '+r.school_type : ''}</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+                <span style="font-size:18px;font-weight:700;font-family:var(--mono);color:${rateColor(r.attendance_rate)}">${r.attendance_rate.toFixed(1)}%</span>
+                <span style="padding:2px 7px;border-radius:12px;font-size:10px;font-weight:700;background:${kpi.bg};color:${kpi.color};border:1px solid ${kpi.border}">${kpi.label}</span>
+              </div>
+            </div>
+            <div style="background:var(--lite);border-radius:4px;height:6px;margin-bottom:6px;overflow:hidden">
+              <div style="height:100%;width:${barW}%;background:${rateColor(r.attendance_rate)};border-radius:4px"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
+              <span>👩‍🎓 ${r.total_present} hadir / ${r.total_enrolled} enrol</span>
+              <span>📅 ${r.days} hari · 🕐 ${fmtTime(r.submitted_at)}</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('') +
+      missingSchools.map(s => `
+        <div class="card ai" style="opacity:.5;margin-bottom:0">
+          <div class="card-body" style="padding:12px 16px;display:flex;align-items:center;gap:10px">
+            <div style="font-size:20px">📭</div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700;color:var(--navy)">${esc(s.name)}</div>
+              <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${s.code}</div>
+            </div>
+            <span style="padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:#f0f0f0;color:var(--muted)">Tiada Data</span>
+          </div>
+        </div>`).join('');
+
+      // Store for print
+      window._ovData = { schoolRecords, missingSchools, totP, totE, avgRate, maxDays, intervention, dateStr, monthLabel: yr+'-'+mo, ppd, schools };
+    }
+  } catch(e) { showToast('⚠ Error: ' + e.message); }
+}
+
+function printPPDOverview() {
+  const d = window._ovData;
+  if (!d) { showToast('⚠ No data loaded yet'); return; }
+
+  const navy='#0D2137', blue='#1A5F9C', green='#1DB87A', red='#E63946', gold='#d4af37';
+  const rateColor = r => r >= 95 ? gold : r >= 90 ? blue : r >= 85 ? '#718096' : red;
+  const kpiBadge = r => {
+    if(r>=95) return `<span style="background:rgba(212,175,55,.2);color:#8a6d00;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">🏆 Platinum</span>`;
+    if(r>=90) return `<span style="background:rgba(26,95,156,.15);color:${blue};padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">🥇 Gold</span>`;
+    if(r>=85) return `<span style="background:rgba(107,126,146,.15);color:#4a5568;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">🥈 Silver</span>`;
+    return `<span style="background:rgba(230,57,70,.12);color:${red};padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">🚨 Intervensi</span>`;
+  };
+  const genTime = new Date().toLocaleString('en-MY');
+
+  const html = `
+  <style>
+    @page { size: A4 portrait; margin: 15mm; }
+    @media print {
+      body > *:not(#ppd-ov-print) { display:none!important; }
+      #ppd-ov-print { display:block!important; }
+    }
+    #ppd-ov-print { display:none; font-family:'DM Sans',sans-serif; font-size:13px; color:#1A2A3A; }
+    .pg { page-break-after:always; }
+  </style>
+  <div style="border-bottom:3px solid ${navy};padding-bottom:10px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-end">
+    <div>
+      <div style="font-size:20px;font-weight:700;color:${navy};font-family:'Playfair Display',serif">SiPPD Cloud System</div>
+      <div style="font-size:12px;color:#666;margin-top:2px">Laporan Prestasi Kehadiran Murid — PPD Overview</div>
+    </div>
+    <div style="text-align:right;font-size:11px;color:#666">
+      <div style="font-size:16px;font-weight:700;color:${navy}">${esc(d.ppd)}</div>
+      <div>${d.monthLabel} · ${d.schools.length} sekolah</div>
+      <div>Dijana: ${genTime}</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">
+    <div style="border:1.5px solid #dde;border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:22px;font-weight:700;color:${navy}">${d.avgRate ? d.avgRate+'%' : '—'}</div>
+      <div style="font-size:10px;color:#888;margin-top:2px">Kadar Avg Bulanan</div>
+    </div>
+    <div style="border:1.5px solid #dde;border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:22px;font-weight:700;color:${green}">${d.totP || '—'}</div>
+      <div style="font-size:10px;color:#888;margin-top:2px">Total Hadir</div>
+    </div>
+    <div style="border:1.5px solid #dde;border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:22px;font-weight:700;color:${navy}">${d.totE || '—'}</div>
+      <div style="font-size:10px;color:#888;margin-top:2px">Total Enrolmen</div>
+    </div>
+    <div style="border:1.5px solid #dde;border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:22px;font-weight:700;color:${red}">${d.intervention}</div>
+      <div style="font-size:10px;color:#888;margin-top:2px">Sekolah Intervensi</div>
+    </div>
+  </div>
+
+  <div style="font-size:13px;font-weight:700;color:${navy};border-left:4px solid ${blue};padding-left:8px;margin-bottom:10px">
+    Prestasi Sekolah — ${d.monthLabel}
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px">
+    <thead>
+      <tr>
+        <th style="background:${navy};color:#fff;padding:7px 10px;text-align:left">#</th>
+        <th style="background:${navy};color:#fff;padding:7px 10px;text-align:left">Sekolah</th>
+        <th style="background:${navy};color:#fff;padding:7px 10px;text-align:center">Hadir</th>
+        <th style="background:${navy};color:#fff;padding:7px 10px;text-align:center">Enrol</th>
+        <th style="background:${navy};color:#fff;padding:7px 10px;text-align:center">Avg Rate</th>
+        <th style="background:${navy};color:#fff;padding:7px 10px;text-align:center">Hari</th>
+        <th style="background:${navy};color:#fff;padding:7px 10px;text-align:center">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${d.schoolRecords.map((r,i) => `
+      <tr style="background:${i%2===0?'#f8fafc':'#fff'}">
+        <td style="padding:7px 10px;font-weight:700;color:${navy}">${i+1}</td>
+        <td style="padding:7px 10px">
+          <div style="font-weight:600">${esc(r.school_name)}</div>
+          <div style="font-size:10px;color:#888;font-family:monospace">${r.school_code}</div>
+        </td>
+        <td style="padding:7px 10px;text-align:center;color:${green};font-weight:700">${r.total_present}</td>
+        <td style="padding:7px 10px;text-align:center">${r.total_enrolled}</td>
+        <td style="padding:7px 10px;text-align:center;font-weight:700;color:${rateColor(r.attendance_rate)}">${r.attendance_rate.toFixed(1)}%</td>
+        <td style="padding:7px 10px;text-align:center;color:#666">${r.days}</td>
+        <td style="padding:7px 10px;text-align:center">${kpiBadge(r.attendance_rate)}</td>
+      </tr>`).join('')}
+      ${d.missingSchools.map(s => `
+      <tr style="background:#fafafa;opacity:.6">
+        <td style="padding:7px 10px;color:#aaa">—</td>
+        <td style="padding:7px 10px">
+          <div style="font-weight:600;color:#aaa">${esc(s.name)}</div>
+          <div style="font-size:10px;color:#bbb;font-family:monospace">${s.code}</div>
+        </td>
+        <td colspan="5" style="padding:7px 10px;text-align:center;color:#aaa;font-style:italic">Tiada Rekod</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+  <div style="text-align:center;font-size:11px;color:#aaa;border-top:1px solid #eee;padding-top:10px">
+    SiPPD Cloud System · Dijana ${genTime}
+  </div>`;
+
+  let printDiv = document.getElementById('ppd-ov-print');
+  if (!printDiv) { printDiv = document.createElement('div'); printDiv.id = 'ppd-ov-print'; document.body.appendChild(printDiv); }
+  printDiv.innerHTML = html;
+  setTimeout(() => window.print(), 150);
+}
 async function loadPPDDashboard() {
   const ppd = CU.ppd;
   const cfg = getSupaConfig();
