@@ -1007,24 +1007,24 @@ async function loadPPDDashboard() {
   const cfg = getSupaConfig();
   if (!cfg.url || !cfg.key) { showToast('⚠ Supabase not configured'); return; }
 
-  // Get all schools under this PPD
   const schools = getSchools().filter(s => s.ppd_code === ppd);
   document.getElementById('ppd-total-schools').textContent = schools.length;
+
+  const codes = schools.map(s => s.code);
+  if (!codes.length) { renderPPDCards([], schools); return; }
 
   let records = [];
 
   if (ppdMode === 'day') {
     const date = document.getElementById('ppd-date').value;
     if (!date) return;
-    // Fetch from Supabase for this date, filtered by school codes in this PPD
-    const codes = schools.map(s => s.code);
-    if (!codes.length) { renderPPDCards([], schools); return; }
     try {
       const res = await fetch(
         `${cfg.url}/rest/v1/attendance?date=eq.${date}&school_code=in.(${codes.join(',')})&order=school_name`,
-        { headers: { 'apikey': cfg.key, 'Authorization': 'Bearer ' + cfg.key } }
+        { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key } }
       );
       if (res.ok) records = await res.json();
+      else showToast('⚠ Supabase error: ' + res.status);
     } catch(e) { showToast('⚠ Fetch error: ' + e.message); }
 
   } else {
@@ -1032,55 +1032,56 @@ async function loadPPDDashboard() {
     if (!month) return;
     const [yr, mo] = month.split('-');
     const startDate = `${yr}-${mo}-01`;
-    const endDate = `${yr}-${mo}-${new Date(yr, mo, 0).getDate()}`;
-    const codes = schools.map(s => s.code);
-    if (!codes.length) { renderPPDCards([], schools); return; }
+    const endDate   = `${yr}-${mo}-${new Date(yr, mo, 0).getDate()}`;
     try {
-      // Fetch all records for this month for PPD schools
       const res = await fetch(
         `${cfg.url}/rest/v1/attendance?date=gte.${startDate}&date=lte.${endDate}&school_code=in.(${codes.join(',')})&order=school_code`,
-        { headers: { 'apikey': cfg.key, 'Authorization': 'Bearer ' + cfg.key } }
+        { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key } }
       );
       if (res.ok) {
         const raw = await res.json();
-        // Aggregate by school: average rate, sum totals
         const map = {};
         raw.forEach(r => {
           if (!map[r.school_code]) {
             map[r.school_code] = {
-              school_code: r.school_code,
-              school_name: r.school_name,
-              school_type: r.school_type,
-              total_enrolled: 0,
-              total_present: 0,
-              total_absent: 0,
-              days: 0,
-              submitted_at: r.submitted_at,
-              submitted_by: r.submitted_by,
-              classrooms: r.classrooms,
-              _rawDays: []
+              school_code:  r.school_code,
+              school_name:  r.school_name,
+              school_type:  r.school_type,
+              // Keep actual enrollment, not cumulative sum
+              total_enrolled: r.total_enrolled,
+              total_present:  0,
+              total_absent:   0,
+              days:           0,
+              rate_sum:       0,
+              submitted_at:   r.submitted_at,
+              submitted_by:   r.submitted_by,
+              classrooms:     r.classrooms
             };
           }
-          map[r.school_code].total_enrolled += r.total_enrolled;
-          map[r.school_code].total_present += r.total_present;
-          map[r.school_code].total_absent += r.total_absent;
-          map[r.school_code].days += 1;
-          if (r.submitted_at > map[r.school_code].submitted_at) {
-            map[r.school_code].submitted_at = r.submitted_at;
-            map[r.school_code].classrooms = r.classrooms;
+          const m = map[r.school_code];
+          m.total_enrolled  = r.total_enrolled; // always latest enrollment
+          m.total_present  += r.total_present;
+          m.total_absent   += r.total_absent;
+          m.days           += 1;
+          m.rate_sum       += parseFloat(r.attendance_rate);
+          if (r.submitted_at > m.submitted_at) {
+            m.submitted_at = r.submitted_at;
+            m.submitted_by = r.submitted_by;
+            m.classrooms   = r.classrooms;
           }
-          map[r.school_code]._rawDays.push(r);
         });
+        // Average daily rate across submitted days — correct monthly metric
         records = Object.values(map).map(s => ({
           ...s,
-          attendance_rate: s.total_enrolled > 0
-            ? parseFloat((s.total_present / s.total_enrolled * 100).toFixed(2))
+          attendance_rate: s.days > 0
+            ? parseFloat((s.rate_sum / s.days).toFixed(2))
             : 0
         }));
-      }
+      } else showToast('⚠ Supabase error: ' + res.status);
     } catch(e) { showToast('⚠ Fetch error: ' + e.message); }
   }
 
+  window._ppdRecords = records;
   renderPPDCards(records, schools);
 }
 
@@ -1093,35 +1094,51 @@ function kpiLevel(rate) {
 
 function renderPPDCards(records, schools) {
   const submittedCodes = new Set(records.map(r => r.school_code));
-  const totE = records.reduce((a, r) => a + r.total_enrolled, 0);
-  const totP = records.reduce((a, r) => a + r.total_present, 0);
-  const rate = totE > 0 ? (totP / totE * 100).toFixed(1) + '%' : '—';
-  const intervention = records.filter(r => r.attendance_rate < 85).length;
-
-  document.getElementById('ppd-rate').textContent = rate;
-  document.getElementById('ppd-present').textContent = totP || '—';
-  document.getElementById('ppd-enrolled').textContent = totE || '—';
-  document.getElementById('ppd-submitted').textContent = records.length;
-  document.getElementById('ppd-intervention').textContent = intervention;
-
-  const container = document.getElementById('ppd-cards');
-  const emptyEl = document.getElementById('ppd-empty');
-
-  // Build card list: submitted first (sorted by rate desc), then missing
-  const submitted = [...records].sort((a, b) => b.attendance_rate - a.attendance_rate);
   const missing = schools.filter(s => !submittedCodes.has(s.code));
 
-  if (!submitted.length && !missing.length) {
+  // ── Overall stats: only from submitted schools, stats stay — if none submitted ──
+  if (records.length) {
+    let rateDisplay, totP, totE;
+    if (ppdMode === 'month') {
+      totP = records.reduce((a, r) => a + r.total_present, 0);
+      totE = records.reduce((a, r) => a + r.total_enrolled, 0);
+      const avgRate = (records.reduce((a, r) => a + r.attendance_rate, 0) / records.length).toFixed(1);
+      rateDisplay = avgRate + '%';
+    } else {
+      totE = records.reduce((a, r) => a + r.total_enrolled, 0);
+      totP = records.reduce((a, r) => a + r.total_present, 0);
+      rateDisplay = totE > 0 ? (totP / totE * 100).toFixed(1) + '%' : '—';
+    }
+    const intervention = records.filter(r => r.attendance_rate < 85).length;
+    document.getElementById('ppd-rate').textContent         = rateDisplay;
+    document.getElementById('ppd-present').textContent      = totP;
+    document.getElementById('ppd-enrolled').textContent     = totE;
+    document.getElementById('ppd-intervention').textContent = intervention;
+  } else {
+    // Nothing submitted yet — keep stats blank
+    document.getElementById('ppd-rate').textContent         = '—';
+    document.getElementById('ppd-present').textContent      = '—';
+    document.getElementById('ppd-enrolled').textContent     = '—';
+    document.getElementById('ppd-intervention').textContent = '—';
+  }
+  document.getElementById('ppd-submitted').textContent = records.length;
+
+  const container = document.getElementById('ppd-cards');
+  const emptyEl   = document.getElementById('ppd-empty');
+
+  if (!records.length && !missing.length) {
     emptyEl.style.display = 'block';
     container.innerHTML = '';
+    window._ppdRecords = records;
     return;
   }
   emptyEl.style.display = 'none';
 
-  const rateBarColor = (r) => r >= 95 ? '#d4af37' : r >= 90 ? 'var(--blue)' : r >= 85 ? '#718096' : 'var(--red)';
+  const rateBarColor = r => r >= 95 ? '#d4af37' : r >= 90 ? 'var(--blue)' : r >= 85 ? '#718096' : 'var(--red)';
+  const submitted = [...records].sort((a, b) => b.attendance_rate - a.attendance_rate);
 
-  container.innerHTML = submitted.map(r => {
-    const kpi = kpiLevel(r.attendance_rate);
+  const submittedCards = submitted.map(r => {
+    const kpi  = kpiLevel(r.attendance_rate);
     const barW = Math.min(r.attendance_rate, 100).toFixed(1);
     const typeTag = r.school_type || '';
     return `
@@ -1137,21 +1154,22 @@ function renderPPDCards(records, schools) {
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:10px">
             <span style="padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;background:${kpi.bg};color:${kpi.color};border:1px solid ${kpi.border}">${kpi.label}</span>
+            ${ppdMode === 'month' && r.days
+              ? `<span style="background:rgba(26,95,156,.1);color:var(--blue);padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700">📅 ${r.days} day${r.days > 1 ? 's' : ''}</span>`
+              : ''}
           </div>
         </div>
-        <!-- Rate bar -->
         <div style="background:var(--lite);border-radius:6px;height:8px;margin-bottom:10px;overflow:hidden">
           <div style="height:100%;width:${barW}%;background:${rateBarColor(r.attendance_rate)};border-radius:6px;transition:width .6s ease"></div>
         </div>
-        <!-- Stats row -->
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">
           <div style="text-align:center">
             <div style="font-size:18px;font-weight:700;font-family:var(--mono);color:${rateBarColor(r.attendance_rate)}">${r.attendance_rate.toFixed(1)}%</div>
-            <div style="font-size:10px;color:var(--muted);font-weight:600">RATE</div>
+            <div style="font-size:10px;color:var(--muted);font-weight:600">${ppdMode === 'month' ? 'AVG RATE' : 'RATE'}</div>
           </div>
           <div style="text-align:center">
             <div style="font-size:18px;font-weight:700;font-family:var(--mono);color:var(--green)">${r.total_present}</div>
-            <div style="font-size:10px;color:var(--muted);font-weight:600">PRESENT</div>
+            <div style="font-size:10px;color:var(--muted);font-weight:600">${ppdMode === 'month' ? 'TOTAL HADIR' : 'PRESENT'}</div>
           </div>
           <div style="text-align:center">
             <div style="font-size:18px;font-weight:700;font-family:var(--mono);color:var(--navy)">${r.total_enrolled}</div>
@@ -1159,18 +1177,20 @@ function renderPPDCards(records, schools) {
           </div>
           <div style="text-align:center">
             <div style="font-size:18px;font-weight:700;font-family:var(--mono);color:var(--red)">${r.total_absent}</div>
-            <div style="font-size:10px;color:var(--muted);font-weight:600">ABSENT</div>
+            <div style="font-size:10px;color:var(--muted);font-weight:600">${ppdMode === 'month' ? 'TOTAL ABSENT' : 'ABSENT'}</div>
           </div>
         </div>
-        <div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:right">
-          🕐 Last updated ${fmtTime(r.submitted_at)} · by ${esc(r.submitted_by || '—')}
+        <div style="margin-top:10px;font-size:11px;color:var(--muted);display:flex;justify-content:space-between;align-items:center">
+          <span>🕐 ${fmtTime(r.submitted_at)} · ${esc(r.submitted_by || '—')}</span>
+          ${ppdMode === 'month' && r.days
+            ? `<span>Avg of ${r.days} submission${r.days > 1 ? 's' : ''}</span>`
+            : ''}
         </div>
       </div>
     </div>`;
-  }).join('') +
+  }).join('');
 
-  // Missing schools — greyed out cards
-  missing.map(s => `
+  const missingCards = missing.map(s => `
     <div class="card ai" style="opacity:.55;margin-bottom:0">
       <div class="card-body" style="padding:14px 16px;display:flex;align-items:center;gap:12px">
         <div style="font-size:24px">📭</div>
@@ -1182,7 +1202,7 @@ function renderPPDCards(records, schools) {
       </div>
     </div>`).join('');
 
-  // Store records globally for modal access
+  container.innerHTML = submittedCards + missingCards;
   window._ppdRecords = records;
 }
 
@@ -1650,8 +1670,8 @@ function renderCalendar(){
       border:2px solid transparent;
       cursor:${isWeekend ? 'default' : 'pointer'};
       opacity:${isWeekend ? '0.3' : '1'};
-      background:${isWeekend ? 'var(--lite)' : hasRecord ? '#d1fae5' : isPast ? '#fee2e2' : 'transparent'};
-      color:${isWeekend ? 'var(--muted)' : hasRecord ? '#065f46' : isPast ? '#991b1b' : 'var(--navy)'};
+      background:${isWeekend?'var(--lite)':hasRecord?'#d1fae5':isPast?'#f1f5f9':'transparent'};
+      color:${isWeekend?'var(--muted)':hasRecord?'#065f46':isPast?'#94a3b8':'var(--navy)'};
       ${isSelected && !isWeekend ? 'border:2px solid var(--navy);' : ''}
       ${isToday && !isWeekend ? 'border:2px solid #2E8BC0;' : ''}
     `;
@@ -1684,23 +1704,7 @@ async function hashPassword(password){
 // ══════════════════════════════════════════════════
 // DEFAULT SCHOOLS LIST
 // ══════════════════════════════════════════════════
-const DEFAULT_SCHOOLS = [
-  {code:'SKA001',name:'SK Tanjung Aru'},
-  {code:'SKA002',name:'SK Likas'},
-  {code:'SKA003',name:'SK Luyang'},
-  {code:'SKA004',name:'SK Kepayan'},
-  {code:'SKA005',name:'SK Kolombong'},
-  {code:'SKA006',name:'SK Inanam'},
-  {code:'SKA007',name:'SK Menggatal'},
-  {code:'SKA008',name:'SK Telipok'},
-  {code:'SKA009',name:'SK Kingfisher'},
-  {code:'SKA010',name:'SK Lok Kawi'},
-  {code:'SKA011',name:'SJK(C) Chung Hwa'},
-  {code:'SKA012',name:'SJK(C) Khoo Choo Khye'},
-  {code:'SKA013',name:'SJK(C) Yee Ching'},
-  {code:'SKA014',name:'SJK(T) Tamil'},
-  {code:'SKA015',name:'SMK Likas'},
-];
+const DEFAULT_SCHOOLS = [];
 
 // ══════════════════════════════════════════════════
 // STORAGE HELPERS
@@ -1734,13 +1738,9 @@ function getAllRecords(){
 }
 function getRecordsForDate(date){return getAllRecords().filter(r=>r.date===date)}
 
-async function initDefaults(){
-  // Only seed schools if localStorage is empty
-  // Users are seeded directly in Supabase, not here
-  if(!getSchools().length){
-    saveSchools(DEFAULT_SCHOOLS);
-    await saveSchoolsToSupabase(DEFAULT_SCHOOLS);
-  }
+async function initDefaults() {
+  // Schools come from Supabase via background sync in DOMContentLoaded
+  // Nothing to seed locally
 }
 // ══════════════════════════════════════════════════
 // SESSION
@@ -2019,14 +2019,25 @@ async function saveAttendance(){
   const date=document.getElementById('t-date').value;
   const errEl=document.getElementById('t-att-err');
   errEl.style.display='none';
-  if(!date){errEl.textContent='⚠ Select a date.';errEl.style.display='flex';return}
+
+  if(!date){
+    errEl.textContent='⚠ Select a date.';
+    errEl.style.display='flex';
+    return;
+  }
+
+  // Prevent future date submission
+  if(date > today()){
+    errEl.textContent='⚠ Cannot submit attendance for a future date.';
+    errEl.style.display='flex';
+    return;
+  }
 
   const existing=getRecord(code,date);
   if(existing){
     const ok=confirm(`⚠ Attendance for ${fmtDate(date)} already submitted.\n\nOverwrite with new data?`);
     if(!ok) return;
   }
-
   const classes=getSetup(code)||[];
   const inputs=document.querySelectorAll('#t-att-rows .att-input');
   const classrooms=[];
@@ -2039,7 +2050,6 @@ async function saveAttendance(){
     classrooms.push({name:cls.name,enrolled:cls.enrolled,present,absent:cls.enrolled-present,rate:cls.enrolled>0?parseFloat((present/cls.enrolled*100).toFixed(2)):0});
   });
   if(!valid) return;
-
   const totalEnrolled=classrooms.reduce((a,c)=>a+c.enrolled,0);
   const totalPresent=classrooms.reduce((a,c)=>a+c.present,0);
   const record={
@@ -2055,9 +2065,7 @@ async function saveAttendance(){
     attendance_rate:totalEnrolled>0?parseFloat((totalPresent/totalEnrolled*100).toFixed(2)):0,
     classrooms,
   };
-
   saveRecord(record);
-
   const syncEl=document.getElementById('t-sync-status');
   syncEl.textContent='Sending to Supabase…';
   const result=await pushToSupabase(record);
@@ -2066,7 +2074,6 @@ async function saveAttendance(){
   } else {
     syncEl.textContent=`⚠ Saved locally. Supabase: ${result.error}`;
   }
-
   updateDateIndicator(date);
   showSubmittedSummary(record);
   showToast('✓ Attendance saved!');
@@ -2795,29 +2802,40 @@ async function getPPDFromSupabase(){
 async function saveSetupToSupabase(code, classes) {
   const cfg = getSupaConfig();
   if (!cfg.url || !cfg.key) return { ok: false };
-  
+  const payload = { school_code: code, classes, updated_at: new Date().toISOString() };
   try {
-    // Always INSERT a new record with current timestamp
-    const res = await fetch(`${cfg.url}/rest/v1/class_setup`, {
-      method: 'POST',
-      headers: {
-        'apikey': cfg.key,
-        'Authorization': 'Bearer ' + cfg.key,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ 
-        school_code: code, 
-        classes, 
-        updated_at: new Date().toISOString(),
-        // Add a unique ID or timestamp to prevent conflicts
-        saved_at: new Date().toISOString()
-      }),
-    });
-    
-    return { ok: res.ok };
-  } catch(e) {
-    return { ok: false, error: e.message };
-  }
+    // Try PATCH first — update existing row
+    const patch = await fetch(
+      `${cfg.url}/rest/v1/class_setup?school_code=eq.${code}`,
+      {
+        method: 'PATCH',
+        headers: {
+          apikey: cfg.key,
+          Authorization: 'Bearer ' + cfg.key,
+          'Content-Type': 'application/json',
+          Prefer: 'return=minimal'
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+    if (patch.ok) return { ok: true };
+
+    // No existing row — INSERT
+    const post = await fetch(
+      `${cfg.url}/rest/v1/class_setup`,
+      {
+        method: 'POST',
+        headers: {
+          apikey: cfg.key,
+          Authorization: 'Bearer ' + cfg.key,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+    return { ok: post.ok };
+  } catch(e) { return { ok: false, error: e.message }; }
 }
 
 async function loadSetupFromSupabase(code){
