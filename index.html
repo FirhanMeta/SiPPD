@@ -547,6 +547,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3L1 9l4 2.18V17h2v-4.82l1 .55V17c0 1.1 1.79 2 4 2s4-.9 4-2v-4.27l3-1.64V17h2V9L12 3zm4 12.18c-.2.42-1.63 1.32-4 1.32s-3.8-.9-4-1.32v-2.9L12 14l4-1.72v2.9z"/></svg>
       Schools
     </button>
+    <button class="bnav-item" id="ab-ppd" onclick="aTab('ppd')"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>PPD</button>
     <button class="bnav-item" id="ab-supa" onclick="aTab('supa')">
       <svg viewBox="0 0 24 24"><path fill="currentColor" d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.237 4.237 0 00-6 0zm-4-4l2 2a7.074 7.074 0 0110 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
       Supabase
@@ -649,6 +650,57 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="sec-title">All Schools</div>
     <div class="card ai"><div id="adm-slist"></div></div>
   </div>
+
+
+  <!-- TAB: PPD MANAGEMENT -->
+  <div id="ac-ppd" class="content" style="display:none">
+    <div class="alert al-info ai">
+      <span>📍</span>
+      <div><strong>PPD Management</strong><br>Add and manage PPD (Pejabat Pendidikan Daerah) locally. Data saved in browser and optionally synced to Supabase.</div>
+    </div>
+
+    <div class="card ai">
+      <div class="card-hd"><div class="c-icon" style="background:#e8f8f2">➕</div><h3>Add PPD</h3></div>
+      <div class="card-body">
+        <div class="frow">
+          <div class="fg">
+            <label class="flabel">PPD Code <span>*</span></label>
+            <input type="text" class="fc" id="ppd-code-input" placeholder="e.g. WPPD001" autocapitalize="characters">
+            <div class="fhint">Unique code for this PPD</div>
+          </div>
+          <div class="fg" style="position:relative">
+            <label class="flabel">JPN <span>*</span></label>
+            <input type="text" id="ppd-jpn-search" class="fc" placeholder="Search JPN…"
+              onfocus="showPPDJPNOptions()" oninput="filterPPDJPNOptions()" onblur="setTimeout(()=>hideDropdown('ppd-jpn-opts'),150)">
+            <input type="hidden" id="ppd-jpn-val">
+            <div id="ppd-jpn-opts" style="position:absolute;z-index:999;background:#fff;border:1px solid #ddd;border-radius:8px;width:100%;max-height:200px;overflow-y:auto;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1);top:68px"></div>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="flabel">PPD Name <span>*</span></label>
+          <input type="text" class="fc" id="ppd-name-input" placeholder="e.g. PPD Semporna">
+        </div>
+        <div id="ppd-add-err" class="alert al-err" style="display:none"></div>
+        <button class="btn btn-g btn-full" onclick="addPPDLocal()">➕ Add PPD</button>
+      </div>
+    </div>
+
+    <div class="sec-title">All PPD <span id="ppd-count-badge" style="font-size:11px;background:var(--lite);padding:2px 8px;border-radius:12px;color:var(--muted);font-weight:700;margin-left:4px">0</span></div>
+
+    <div id="ppd-filter-bar" style="margin-bottom:10px">
+      <input type="text" class="fc" id="ppd-search-filter" placeholder="🔍 Filter PPD by name or code…" oninput="renderPPDList()" style="font-size:13px">
+    </div>
+
+    <div class="card ai"><div id="adm-ppdlist"></div></div>
+
+    <div style="margin-top:12px;margin-bottom:80px;display:flex;gap:8px">
+      <button class="btn btn-s" onclick="exportPPDLocal()" style="flex:1">⬇ Export JSON</button>
+      <button class="btn btn-p" onclick="importPPDLocal()" style="flex:1">⬆ Import JSON</button>
+    </div>
+    <input type="file" id="ppd-import-file" accept=".json" style="display:none" onchange="handlePPDImport(event)">
+  </div>
+  <!-- END TAB: PPD MANAGEMENT -->
+
 
   <!-- TAB: SUPABASE CONFIG -->
   <div id="ac-supa" class="content" style="display:none">
@@ -965,7 +1017,205 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 </div>
 
 <div id="toast"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+// ══════════════════════════════════════════════════
+// PPD LOCAL MANAGEMENT
+// ══════════════════════════════════════════════════
+
+function loadAdminPPD() {
+  renderPPDList();
+}
+
+function renderPPDList() {
+  const filter = (document.getElementById('ppd-search-filter')?.value || '').toLowerCase();
+  const ppds = getPPD().filter(p =>
+    !filter || p.name.toLowerCase().includes(filter) || p.code.toLowerCase().includes(filter) || (p.jpn_code||'').toLowerCase().includes(filter)
+  );
+
+  document.getElementById('ppd-count-badge').textContent = getPPD().length;
+
+  const el = document.getElementById('adm-ppdlist');
+  if (!ppds.length) {
+    el.innerHTML = '<div class="empty" style="padding:24px"><div class="empty-icon">📍</div><h3>' + (filter ? 'No results' : 'No PPD added yet') + '</h3><p>Use the form above to add your first PPD.</p></div>';
+    return;
+  }
+
+  // Group by JPN
+  const jpnList = getJPN();
+  const byJPN = {};
+  ppds.forEach(p => {
+    const key = p.jpn_code || '_no_jpn';
+    if (!byJPN[key]) byJPN[key] = { jpn: jpnList.find(j => j.code === key) || { name: p.jpn_code || 'Unknown JPN', code: key }, items: [] };
+    byJPN[key].items.push(p);
+  });
+
+  el.innerHTML = Object.values(byJPN).map(group => `
+    <div style="padding:8px 16px 4px;background:var(--lite);border-bottom:1px solid var(--bdr)">
+      <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">🗺 ${esc(group.jpn.name)}</span>
+    </div>
+    ${group.items.map(p => `
+    <div class="u-row" id="ppdrow-${esc(p.code)}">
+      <div class="u-av" style="background:rgba(46,139,192,.12);color:var(--sky);font-size:18px">📍</div>
+      <div class="u-info">
+        <div class="u-name">${esc(p.name)}</div>
+        <div class="u-meta" style="font-family:var(--mono)">${esc(p.code)} · ${esc(p.jpn_code || '—')}</div>
+      </div>
+      <div class="u-acts">
+        <button class="btn btn-d btn-sm" onclick="deletePPDLocal('${esc(p.code)}')">🗑</button>
+      </div>
+    </div>`).join('')}
+  `).join('');
+}
+
+function addPPDLocal() {
+  const code = document.getElementById('ppd-code-input').value.trim().toUpperCase();
+  const name = document.getElementById('ppd-name-input').value.trim();
+  const jpn_code = document.getElementById('ppd-jpn-val').value;
+  const errEl = document.getElementById('ppd-add-err');
+  errEl.style.display = 'none';
+
+  if (!code) { errEl.textContent = '⚠ PPD Code is required.'; errEl.style.display = 'flex'; return; }
+  if (!name) { errEl.textContent = '⚠ PPD Name is required.'; errEl.style.display = 'flex'; return; }
+  if (!jpn_code) { errEl.textContent = '⚠ Please select a JPN.'; errEl.style.display = 'flex'; return; }
+
+  const ppds = getPPD();
+  if (ppds.find(p => p.code === code)) { errEl.textContent = `⚠ PPD code "${code}" already exists.`; errEl.style.display = 'flex'; return; }
+
+  ppds.push({ code, name, jpn_code });
+  savePPD(ppds);
+
+  // Sync to Supabase if configured
+  syncPPDToSupabase({ code, name, jpn_code });
+
+  document.getElementById('ppd-code-input').value = '';
+  document.getElementById('ppd-name-input').value = '';
+  document.getElementById('ppd-jpn-search').value = '';
+  document.getElementById('ppd-jpn-val').value = '';
+
+  // Refresh PPD dropdowns everywhere
+  populatePPDSelect('au-ppd');
+  populatePPDSelect('eu-ppd');
+
+  renderPPDList();
+  showToast(`✓ PPD "${name}" added`);
+}
+
+function deletePPDLocal(code) {
+  const ppds = getPPD();
+  const p = ppds.find(x => x.code === code);
+  if (!p) return;
+  if (!confirm(`Remove PPD "${p.name}" (${code})? Users assigned to this PPD will need reassignment.`)) return;
+
+  const updated = ppds.filter(x => x.code !== code);
+  savePPD(updated);
+
+  // Try Supabase delete
+  const cfg = getSupaConfig();
+  if (cfg.url && cfg.key) {
+    fetch(`${cfg.url}/rest/v1/sars_ppd?code=eq.${code}`, {
+      method: 'DELETE',
+      headers: { 'apikey': cfg.key, 'Authorization': 'Bearer ' + cfg.key }
+    }).catch(() => {});
+  }
+
+  populatePPDSelect('au-ppd');
+  populatePPDSelect('eu-ppd');
+  renderPPDList();
+  showToast(`🗑 PPD "${p.name}" removed`);
+}
+
+async function syncPPDToSupabase(ppd) {
+  const cfg = getSupaConfig();
+  if (!cfg.url || !cfg.key) return;
+  try {
+    await fetch(`${cfg.url}/rest/v1/sars_ppd`, {
+      method: 'POST',
+      headers: {
+        'apikey': cfg.key,
+        'Authorization': 'Bearer ' + cfg.key,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify(ppd)
+    });
+  } catch(e) { console.warn('PPD Supabase sync failed:', e); }
+}
+
+function exportPPDLocal() {
+  const ppds = getPPD();
+  if (!ppds.length) { showToast('⚠ No PPD to export'); return; }
+  const blob = new Blob([JSON.stringify(ppds, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ppd-list-${today()}.json`;
+  a.click();
+  showToast(`✓ Exported ${ppds.length} PPD(s)`);
+}
+
+function importPPDLocal() {
+  document.getElementById('ppd-import-file').click();
+}
+
+function handlePPDImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data)) throw new Error('Expected an array');
+      const existing = getPPD();
+      const codes = new Set(existing.map(p => p.code));
+      let added = 0;
+      data.forEach(p => {
+        if (p.code && p.name && !codes.has(p.code)) {
+          existing.push({ code: p.code, name: p.name, jpn_code: p.jpn_code || '' });
+          codes.add(p.code);
+          added++;
+        }
+      });
+      savePPD(existing);
+      populatePPDSelect('au-ppd');
+      populatePPDSelect('eu-ppd');
+      renderPPDList();
+      showToast(`✓ Imported ${added} new PPD(s)`);
+    } catch(err) {
+      showToast('⚠ Invalid JSON file: ' + err.message);
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// PPD tab JPN searchable dropdown
+function showPPDJPNOptions() {
+  filterPPDJPNOptions();
+}
+function filterPPDJPNOptions() {
+  const filter = document.getElementById('ppd-jpn-search').value.toLowerCase();
+  const opts = document.getElementById('ppd-jpn-opts');
+  const jpnList = getJPN();
+  opts.style.display = 'block';
+  if (!jpnList.length) {
+    opts.innerHTML = '<div style="padding:10px 14px;color:#999;font-size:13px">No JPN data. Configure Supabase first or add JPN.</div>';
+    return;
+  }
+  opts.innerHTML = jpnList
+    .filter(j => j.name.toLowerCase().includes(filter) || j.code.toLowerCase().includes(filter))
+    .map(j => `<div style="padding:10px 14px;cursor:pointer;font-size:13px;"
+        onmouseover="this.style.background='#f5f5f5'"
+        onmouseout="this.style.background=''"
+        onmousedown="selectPPDJPN('${j.code}','${esc(j.name)}')">
+        ${esc(j.name)} <span style="color:#999;font-size:11px;font-family:monospace">${j.code}</span>
+      </div>`).join('') || '<div style="padding:10px 14px;color:#999;font-size:13px">No results</div>';
+}
+function selectPPDJPN(code, name) {
+  document.getElementById('ppd-jpn-val').value = code;
+  document.getElementById('ppd-jpn-search').value = name;
+  document.getElementById('ppd-jpn-opts').style.display = 'none';
+}
+
+</script>
 <script>
 // ══════════════════════════════════════════════════
 // BUG FIX 4: Declare setupRowCounter at global scope
@@ -2458,6 +2708,7 @@ function closeDrill(){document.getElementById('off-drill').style.display='none'}
 function openAdmin(){
   loadAdminUsers();
   loadAdminSchools();
+  loadAdminPPD();
   loadSupaForm();
   populateJPNSelects();
   populateSchoolSelects();
@@ -2469,12 +2720,13 @@ function openAdmin(){
   showScreen('screen-admin');
 }
 function aTab(tab){
-  ['users','schools','supa'].forEach(t=>{
+  ['users','schools','ppd','supa'].forEach(t=>{
     document.getElementById('ac-'+t).style.display='none';
     document.getElementById('ab-'+t).classList.remove('active');
   });
   document.getElementById('ac-'+tab).style.display='block';
   document.getElementById('ab-'+tab).classList.add('active');
+  if(tab==='ppd') loadAdminPPD();
 }
 
 function loadAdminUsers(){
@@ -2532,7 +2784,8 @@ async function addUser() {
     role,
     display: display || username,
     school: role === 'teacher' ? school : null,
-    createdAt: new Date().toISOString()
+    ppd:    role === 'ppd'     ? document.getElementById('au-ppd').value || null : null,
+    created_at: new Date().toISOString()
   };
 
   const result = await saveUserToSupabase(newUser);
