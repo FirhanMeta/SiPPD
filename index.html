@@ -1747,46 +1747,45 @@ async function initDefaults(){
 // ══════════════════════════════════════════════════
 let CU = null;
 
-async function doLogin(){
+async function doLogin() {
   const username = document.getElementById('l-user').value.trim();
   const password = document.getElementById('l-pass').value;
   const errEl = document.getElementById('l-err');
   errEl.style.display = 'none';
-  
-  if(!username || !password){
+
+  if (!username || !password) {
     errEl.textContent = '⚠ Enter username and password.';
+    errEl.style.display = 'block'; return;
+  }
+
+  const cfg = getSupaConfig();
+  let user = null;
+
+  if (cfg.url && cfg.key) {
+    try {
+      const res = await fetch(
+        `${cfg.url}/rest/v1/sars_users?username=eq.${encodeURIComponent(username)}&limit=1`,
+        { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key } }
+      );
+      const data = await res.json();
+      user = data[0] || null;
+    } catch(e) { /* fall through to localStorage */ }
+  }
+
+  // Fallback: localStorage (for first-run admin bootstrap)
+  if (!user) user = getUsers().find(u => u.username === username) || null;
+
+  if (!user || user.password !== password) {
+    errEl.textContent = '✕ Incorrect username or password.';
     errEl.style.display = 'block';
+    document.getElementById('l-pass').classList.add('err');
+    setTimeout(() => document.getElementById('l-pass').classList.remove('err'), 1200);
     return;
   }
-  
-  try {
-    // Call your Vercel API instead of Supabase directly
-    const response = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
-    });
-    
-    const result = await response.json();
-    
-    if (!response.ok || !result.success) {
-      errEl.textContent = '✕ ' + (result.error || 'Login failed');
-      errEl.style.display = 'block';
-      document.getElementById('l-pass').classList.add('err');
-      setTimeout(()=>document.getElementById('l-pass').classList.remove('err'), 1200);
-      return;
-    }
-    
-    // Login successful
-    CU = result.user;
-    localStorage.setItem('sars_session', JSON.stringify(CU));
-    showLanding();
-    
-  } catch(err){
-    console.error('Login error:', err);
-    errEl.textContent = '✕ Network error. Try again.';
-    errEl.style.display = 'block';
-  }
+
+  CU = user;
+  localStorage.setItem('sars_session', JSON.stringify(CU));
+  showLanding();
 }
 function logout(){
   CU=null;
@@ -2313,17 +2312,26 @@ async function addUser() {
 
 // NEW: inserts single user via API
 async function saveUserToSupabase(user) {
+  const cfg = getSupaConfig();
+  if (!cfg.url || !cfg.key) return { ok: false, error: 'Supabase not configured' };
   try {
-    const res = await fetch('/api/users', {
+    const res = await fetch(`${cfg.url}/rest/v1/sars_users`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        apikey: cfg.key,
+        Authorization: 'Bearer ' + cfg.key,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates'
+      },
       body: JSON.stringify(user)
     });
-    const data = await res.json();
-    if (!res.ok) return { ok: false, error: data.error || 'Unknown error' };
+    if (!res.ok) {
+      const body = await res.text();
+      return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 100)}` };
+    }
     return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err.message };
+  } catch(e) {
+    return { ok: false, error: e.message };
   }
 }
 
@@ -3137,41 +3145,35 @@ function populatePPDSelect(elId, selected = '') {
 document.addEventListener('DOMContentLoaded', async () => {
   initDefaults();
 
-  // ── Restore session FIRST so screen never stays blank ──
   const saved = localStorage.getItem('sars_session');
   if (saved) {
-    try {
-      CU = JSON.parse(saved);
-      showLanding();
-    } catch {
-      localStorage.removeItem('sars_session');
-      showScreen('screen-login');
-    }
+    try { CU = JSON.parse(saved); showLanding(); }
+    catch { localStorage.removeItem('sars_session'); showScreen('screen-login'); }
   } else {
     showScreen('screen-login');
   }
 
-  // ── Then sync Supabase data in background ──
-  try {
-    const res = await fetch('/api/supaconfig');
-    const cfg = await res.json();
-    if (cfg.url && cfg.key) {
-      saveSupaConf(cfg);
-
+  // Use config already saved by admin in localStorage
+  const cfg = getSupaConfig();
+  if (cfg.url && cfg.key) {
+    try {
       const [remoteUsers, remoteSchools, remoteJPN, remotePPD] = await Promise.all([
         getUsersFromSupabase(),
         getSchoolsFromSupabase(),
         getJPNFromSupabase(),
         getPPDFromSupabase()
       ]);
-
-      if (remoteUsers?.length)  saveUsers(remoteUsers);
+      if (remoteUsers?.length)   saveUsers(remoteUsers);
       if (remoteSchools?.length) saveSchools(remoteSchools);
-      if (remoteJPN?.length)    saveJPN(remoteJPN);
-      if (remotePPD?.length)    savePPD(remotePPD);
-    }
-  } catch(e) {
-    console.warn('Auto Supabase config failed:', e);
+      if (remoteJPN?.length)     saveJPN(remoteJPN);
+      if (remotePPD?.length)     savePPD(remotePPD);
+
+      // Refresh active session with latest data from Supabase
+      if (remoteUsers?.length && CU) {
+        const fresh = remoteUsers.find(u => u.username === CU.username);
+        if (fresh) { CU = fresh; localStorage.setItem('sars_session', JSON.stringify(CU)); }
+      }
+    } catch(e) { console.warn('Background sync failed:', e); }
   }
 });
 </script>
