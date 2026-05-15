@@ -742,20 +742,61 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="card ai">
       <div class="card-hd"><div class="c-icon" style="background:#FFF4E0">📋</div><h3>Required Table Schema</h3></div>
       <div class="card-body">
-        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Create this table in your Supabase SQL editor:</p>
-        <pre style="background:var(--navy);color:#a8d8ea;padding:16px;border-radius:8px;font-size:12px;font-family:var(--mono);overflow-x:auto;line-height:1.6">create table attendance (
-  id          uuid primary key default gen_random_uuid(),
-  school_code text not null,
-  school_name text not null,
-  date        date not null,
-  submitted_by text,
-  submitted_at timestamptz default now(),
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Create these tables in your Supabase SQL editor:</p>
+        <pre style="background:var(--navy);color:#a8d8ea;padding:16px;border-radius:8px;font-size:12px;font-family:var(--mono);overflow-x:auto;line-height:1.6">-- 1. Attendance records
+create table attendance (
+  id             uuid primary key default gen_random_uuid(),
+  school_code    text not null,
+  school_name    text not null,
+  date           date not null,
+  submitted_by   text,
+  submitted_at   timestamptz default now(),
   total_enrolled int,
   total_present  int,
   total_absent   int,
   attendance_rate numeric(5,2),
-  classrooms  jsonb,
+  classrooms     jsonb,
   unique(school_code, date)
+);
+
+-- 2. Schools (code is primary key)
+create table sars_schools (
+  code      text primary key,
+  name      text not null,
+  type      text,           -- SK / SMK / SJKC / SJKT / SABK / SMKA
+  jpn_code  text,
+  ppd_code  text
+);
+
+-- 3. Users
+create table sars_users (
+  username    text primary key,
+  password    text not null,
+  role        text not null, -- teacher / ppd / admin
+  display     text,
+  school      text,          -- for teachers
+  ppd         text,          -- for ppd officers
+  created_at  timestamptz default now()
+);
+
+-- 4. PPD (Pejabat Pendidikan Daerah)
+create table sars_ppd (
+  code      text primary key,
+  name      text not null,
+  jpn_code  text
+);
+
+-- 5. JPN (Jabatan Pendidikan Negeri)
+create table sars_jpn (
+  code  text primary key,
+  name  text not null
+);
+
+-- 6. Class setup per school
+create table class_setup (
+  school_code text primary key,
+  classes     jsonb,
+  updated_at  timestamptz default now()
 );</pre>
       </div>
     </div>
@@ -953,6 +994,61 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         </table>
       </div>
       <div id="ppd-modal-footer" style="padding:10px 16px;font-size:11px;color:var(--muted);border-top:1px solid var(--bdr)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT SCHOOL MODAL -->
+<div class="modal-ov" id="modal-edit-school">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-hd">
+      <h3>✏️ Edit School</h3>
+      <button class="modal-x" onclick="closeModal('modal-edit-school')"><svg width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="es-orig">
+      <div class="frow">
+        <div class="fg">
+          <label class="flabel">School Code <span>*</span></label>
+          <input type="text" class="fc" id="es-code" autocapitalize="characters" placeholder="e.g. SKA016">
+        </div>
+        <div class="fg">
+          <label class="flabel">School Type <span>*</span></label>
+          <select class="fc" id="es-type">
+            <option value="SK">SK</option>
+            <option value="SMK">SMK</option>
+            <option value="SJKC">SJKC</option>
+            <option value="SJKT">SJKT</option>
+            <option value="SABK">SABK</option>
+            <option value="SMKA">SMKA</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="flabel">School Name <span>*</span></label>
+        <input type="text" class="fc" id="es-name" placeholder="e.g. SK Penampang">
+      </div>
+      <div class="frow">
+        <div class="fg" style="position:relative">
+          <label class="flabel">JPN <span>*</span></label>
+          <input type="text" id="es-jpn-search" class="fc" placeholder="Search JPN…"
+            onfocus="showESJPNOptions()" oninput="filterESJPNOptions()" onblur="setTimeout(()=>hideDropdown('es-jpn-opts'),150)">
+          <input type="hidden" id="es-jpn">
+          <div id="es-jpn-opts" style="position:absolute;z-index:999;background:#fff;border:1px solid #ddd;border-radius:8px;width:100%;max-height:180px;overflow-y:auto;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1);top:68px"></div>
+        </div>
+        <div class="fg" style="position:relative">
+          <label class="flabel">PPD <span>*</span></label>
+          <input type="text" id="es-ppd-search" class="fc" placeholder="Select JPN first…"
+            onfocus="showESPPDOptions()" oninput="filterESPPDOptions()" onblur="setTimeout(()=>hideDropdown('es-ppd-opts'),150)" disabled>
+          <input type="hidden" id="es-ppd">
+          <div id="es-ppd-opts" style="position:absolute;z-index:999;background:#fff;border:1px solid #ddd;border-radius:8px;width:100%;max-height:180px;overflow-y:auto;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1);top:68px"></div>
+        </div>
+      </div>
+      <div id="es-err" class="alert al-err" style="display:none"></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-s" onclick="closeModal('modal-edit-school')">Cancel</button>
+      <button class="btn btn-p" onclick="saveEditSchool()">💾 Save Changes</button>
     </div>
   </div>
 </div>
@@ -2932,17 +3028,32 @@ async function deleteUser(username){
 
 function loadAdminSchools(){
   const schools=getSchools();
-  document.getElementById('adm-slist').innerHTML=schools.map(s=>`
+  const ppds=getPPD();
+  const jpns=getJPN();
+  document.getElementById('adm-slist').innerHTML=schools.map(s=>{
+    const ppd=ppds.find(p=>p.code===s.ppd_code);
+    const jpn=jpns.find(j=>j.code===s.jpn_code);
+    const typeColor={'SK':'#1A5F9C','SMK':'#0E9D8A','SJKC':'#E63946','SJKT':'#F0A500','SABK':'#7c3aed','SMKA':'#0891b2'}[s.type]||'#6B7E92';
+    return `
     <div class="u-row">
       <div class="u-av" style="background:var(--lite);font-size:18px">🏫</div>
-      <div class="u-info">
-        <div class="u-name">${esc(s.name)}</div>
-        <div class="u-meta" style="font-family:var(--mono)">${s.code}</div>
+      <div class="u-info" style="min-width:0">
+        <div class="u-name" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          ${esc(s.name)}
+          ${s.type?`<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;background:${typeColor}22;color:${typeColor};border:1px solid ${typeColor}44">${esc(s.type)}</span>`:''}
+        </div>
+        <div class="u-meta" style="font-family:var(--mono)">${esc(s.code)}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap">
+          ${ppd?`<span>📍 ${esc(ppd.name)}</span>`:'<span style="color:#f0a500">⚠ No PPD</span>'}
+          ${jpn?`<span>🗺 ${esc(jpn.name)}</span>`:''}
+        </div>
       </div>
       <div class="u-acts">
-        <button class="btn btn-d btn-sm" onclick="deleteSchool('${s.code}')">🗑</button>
+        <button class="btn btn-s btn-sm" onclick="openEditSchool('${esc(s.code)}')">✏️</button>
+        <button class="btn btn-d btn-sm" onclick="deleteSchool('${esc(s.code)}')">🗑</button>
       </div>
-    </div>`).join('')||'<div class="empty" style="padding:24px"><h3>No schools</h3></div>';
+    </div>`;
+  }).join('')||'<div class="empty" style="padding:24px"><h3>No schools</h3></div>';
 }
 
 async function addSchool(){
@@ -2958,16 +3069,157 @@ async function addSchool(){
   const schools=getSchools();
   if(schools.find(s=>s.code===code)){errEl.textContent='⚠ School code already exists.';errEl.style.display='flex';return}
   const type = document.getElementById('sc-type').value;
-  schools.push({code, name, type, jpn_code, ppd_code});
+  const newSchool = {code, name, type, jpn_code, ppd_code};
+  schools.push(newSchool);
   saveSchools(schools);
-  await saveSchoolsToSupabase(schools);
+  await upsertSchoolToSupabase(newSchool);
   document.getElementById('sc-code').value='';
   document.getElementById('sc-name').value='';
   document.getElementById('sc-jpn').value='';
-  document.getElementById('sc-ppd').innerHTML='<option value="">— Select PPD —</option>';
+  document.getElementById('sc-jpn-search').value='';
+  document.getElementById('sc-ppd').value='';
+  document.getElementById('sc-ppd-search').value='';
+  document.getElementById('sc-ppd-search').disabled=true;
+  document.getElementById('sc-ppd-search').placeholder='Select JPN first…';
   loadAdminSchools();
   populateSchoolSelects();
   showToast(`✓ School "${name}" added`);
+}
+
+// Upsert a single school record to Supabase
+async function upsertSchoolToSupabase(school){
+  const cfg=getSupaConfig();
+  if(!cfg.url||!cfg.key) return{ok:false};
+  try{
+    const res=await fetch(`${cfg.url}/rest/v1/sars_schools`,{
+      method:'POST',
+      headers:{
+        'apikey':cfg.key,'Authorization':'Bearer '+cfg.key,
+        'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'
+      },
+      body:JSON.stringify(school)
+    });
+    return{ok:res.ok};
+  }catch(e){return{ok:false,error:e.message}}
+}
+
+// Open edit school modal
+function openEditSchool(code){
+  const schools=getSchools();
+  const s=schools.find(x=>x.code===code);
+  if(!s)return;
+
+  document.getElementById('es-orig').value=code;
+  document.getElementById('es-code').value=s.code;
+  document.getElementById('es-name').value=s.name;
+  document.getElementById('es-type').value=s.type||'SK';
+
+  // JPN searchable
+  const jpns=getJPN();
+  const jpn=jpns.find(j=>j.code===s.jpn_code);
+  document.getElementById('es-jpn').value=s.jpn_code||'';
+  document.getElementById('es-jpn-search').value=jpn?jpn.name:(s.jpn_code||'');
+
+  // PPD searchable — populate filtered list
+  const ppd=getPPD().find(p=>p.code===s.ppd_code);
+  document.getElementById('es-ppd').value=s.ppd_code||'';
+  document.getElementById('es-ppd-search').value=ppd?ppd.name:(s.ppd_code||'');
+  document.getElementById('es-ppd-search').disabled=!s.jpn_code;
+
+  document.getElementById('es-err').style.display='none';
+  document.getElementById('modal-edit-school').classList.add('open');
+}
+
+async function saveEditSchool(){
+  const origCode=document.getElementById('es-orig').value;
+  const code=document.getElementById('es-code').value.trim().toUpperCase();
+  const name=document.getElementById('es-name').value.trim();
+  const type=document.getElementById('es-type').value;
+  const jpn_code=document.getElementById('es-jpn').value;
+  const ppd_code=document.getElementById('es-ppd').value;
+  const errEl=document.getElementById('es-err');
+  errEl.style.display='none';
+
+  if(!code){errEl.textContent='⚠ School code is required.';errEl.style.display='flex';return}
+  if(!name){errEl.textContent='⚠ School name is required.';errEl.style.display='flex';return}
+  if(!jpn_code){errEl.textContent='⚠ Please select a JPN.';errEl.style.display='flex';return}
+  if(!ppd_code){errEl.textContent='⚠ Please select a PPD.';errEl.style.display='flex';return}
+
+  let schools=getSchools();
+  if(code!==origCode && schools.find(s=>s.code===code)){
+    errEl.textContent=`⚠ School code "${code}" already exists.`;errEl.style.display='flex';return;
+  }
+
+  const updatedSchool={code,name,type,jpn_code,ppd_code};
+  const cfg=getSupaConfig();
+
+  if(cfg.url&&cfg.key){
+    // If code changed, delete old + insert new; otherwise PATCH
+    if(code!==origCode){
+      await fetch(`${cfg.url}/rest/v1/sars_schools?code=eq.${origCode}`,{
+        method:'DELETE',headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key}
+      });
+      await upsertSchoolToSupabase(updatedSchool);
+    } else {
+      const res=await fetch(`${cfg.url}/rest/v1/sars_schools?code=eq.${origCode}`,{
+        method:'PATCH',
+        headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify(updatedSchool)
+      });
+      if(!res.ok){
+        errEl.textContent=`⚠ Supabase update failed (${res.status}).`;errEl.style.display='flex';return;
+      }
+    }
+  }
+
+  schools=schools.map(s=>s.code===origCode?updatedSchool:s);
+  saveSchools(schools);
+  closeModal('modal-edit-school');
+  loadAdminSchools();
+  populateSchoolSelects();
+  showToast(`✓ School "${name}" updated`);
+}
+
+// Edit School modal JPN/PPD dropdown helpers
+function showESJPNOptions(){ filterESJPNOptions(); }
+function filterESJPNOptions(){
+  const filter=document.getElementById('es-jpn-search').value.toLowerCase();
+  const opts=document.getElementById('es-jpn-opts');
+  opts.style.display='block';
+  opts.innerHTML=getJPN()
+    .filter(j=>j.name.toLowerCase().includes(filter)||j.code.toLowerCase().includes(filter))
+    .map(j=>`<div style="padding:10px 14px;cursor:pointer;font-size:13px"
+        onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''"
+        onmousedown="selectESJPN('${j.code}','${esc(j.name)}')">${esc(j.name)} <span style="color:#999;font-size:11px">${j.code}</span></div>`).join('')
+    ||'<div style="padding:10px 14px;color:#999;font-size:13px">No results</div>';
+}
+function selectESJPN(code,name){
+  document.getElementById('es-jpn').value=code;
+  document.getElementById('es-jpn-search').value=name;
+  document.getElementById('es-jpn-opts').style.display='none';
+  // Reset PPD
+  document.getElementById('es-ppd').value='';
+  document.getElementById('es-ppd-search').value='';
+  document.getElementById('es-ppd-search').disabled=false;
+  document.getElementById('es-ppd-search').placeholder='Search PPD…';
+}
+function showESPPDOptions(){ filterESPPDOptions(); }
+function filterESPPDOptions(){
+  const jpnCode=document.getElementById('es-jpn').value;
+  if(!jpnCode)return;
+  const filter=document.getElementById('es-ppd-search').value.toLowerCase();
+  const opts=document.getElementById('es-ppd-opts');
+  opts.style.display='block';
+  opts.innerHTML=getPPD().filter(p=>p.jpn_code===jpnCode&&(p.name.toLowerCase().includes(filter)||p.code.toLowerCase().includes(filter)))
+    .map(p=>`<div style="padding:10px 14px;cursor:pointer;font-size:13px"
+        onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''"
+        onmousedown="selectESPPD('${p.code}','${esc(p.name)}')">${esc(p.name)}</div>`).join('')
+    ||'<div style="padding:10px 14px;color:#999;font-size:13px">No PPD found for this JPN</div>';
+}
+function selectESPPD(code,name){
+  document.getElementById('es-ppd').value=code;
+  document.getElementById('es-ppd-search').value=name;
+  document.getElementById('es-ppd-opts').style.display='none';
 }
 
 async function deleteSchool(code){
