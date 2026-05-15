@@ -172,10 +172,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .rc-icon{font-size:28px;margin-bottom:10px}
 .role-card h3{font-size:14px;font-weight:700;margin-bottom:4px}
 .role-card p{font-size:11px;color:rgba(255,255,255,.45);line-height:1.4}
-.role-cards.single {
-  grid-template-columns: 1fr;
-  max-width: 200px;
-}
 
 .cs-row{display:grid;grid-template-columns:1fr 90px 34px;gap:8px;align-items:center;margin-bottom:8px;background:var(--lite);border-radius:var(--rs);padding:8px 10px}
 .cs-row input{width:100%;padding:8px 10px;border:1.5px solid var(--bdr);border-radius:6px;font-family:var(--font);font-size:13px;background:var(--surf)}
@@ -279,77 +275,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .role-cards{grid-template-columns:1fr}
   .att-row{grid-template-columns:1fr 70px 70px 60px}
 }
-/* Calendar Styles */
-.cal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding: 0 4px;
-}
-
-.cal-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--navy);
-}
-
-.cal-nav {
-  display: flex;
-  gap: 8px;
-}
-
-.cal-nav button {
-  background: var(--lite);
-  border: 1.5px solid var(--bdr);
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.cal-nav button:hover {
-  background: var(--bdr);
-  border-color: var(--sky);
-}
-
-#cal-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  margin-bottom: 16px;
-}
-
-.cal-day-header {
-  text-align: center;
-  font-weight: 700;
-  font-size: 11px;
-  color: var(--muted);
-  padding: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.cal-cell {
-  aspect-ratio: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  font-weight: 600;
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.cal-cell:hover {
-  background: var(--lite);
-}
 </style>
 </head>
 <body>
@@ -377,7 +302,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
-<!-- LANDING --><div class="card">
+<!-- LANDING -->
+<!-- BUG FIX 1: Removed stray <div class="card"> that was wrapping screen-landing -->
 <div id="screen-landing" class="screen">
   <div class="landing">
     <div class="land-logo">📊</div>
@@ -652,21 +578,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <div class="fg"><label class="flabel">Password <span>*</span></label><input type="password" class="fc" id="au-pass" placeholder="Min 4 chars"></div>
           <div class="fg"><label class="flabel">Display Name</label><input type="text" class="fc" id="au-display" placeholder="e.g. Cikgu Ahmad"></div>
         </div>
-        <div class="fg">
-          <div class="fg" id="au-school-wrap" style="display:none">
-            <label class="flabel">School <span>*</span></label>
-            <select class="fc" id="au-school">
-              <option value="">— Select School —</option>
-            </select>
-            <div class="fhint">One teacher per school.</div>
-          </div>
-          <div class="fg" id="au-ppd-wrap" style="display:none">
-            <label class="flabel">PPD <span>*</span></label>
-            <select class="fc" id="au-ppd">
-              <option value="">— Select PPD —</option>
-            </select>
-            <div class="fhint">One officer per PPD.</div>
-          </div>
+        <!-- BUG FIX 3: Properly closed fg wrapper divs for school/ppd fields -->
+        <div class="fg" id="au-school-wrap" style="display:none">
+          <label class="flabel">School <span>*</span></label>
+          <select class="fc" id="au-school">
+            <option value="">— Select School —</option>
+          </select>
+          <div class="fhint">One teacher per school.</div>
+        </div>
+        <div class="fg" id="au-ppd-wrap" style="display:none">
+          <label class="flabel">PPD <span>*</span></label>
+          <select class="fc" id="au-ppd">
+            <option value="">— Select PPD —</option>
+          </select>
+          <div class="fhint">One officer per PPD.</div>
+        </div>
         <div id="au-err" class="alert al-err" style="display:none"></div>
         <button class="btn btn-g btn-full" onclick="addUser()">➕ Create Account</button>
       </div>
@@ -701,7 +627,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           </div>
         </div>
 
-        <!-- EXISTING: School Code + Name -->
         <div class="frow">
           <div class="fg">
             <label class="flabel">School Type <span>*</span></label>
@@ -757,7 +682,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <div id="sb-ok" class="alert al-ok" style="display:none">✅ Supabase config saved successfully.</div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-p" onclick="saveSupaConfig()" style="flex:1">💾 Save Config</button>
-          <!-- FIX: testSupabase now reads live input values, not just saved config -->
           <button class="btn btn-s" onclick="testSupabase()">🔌 Test Connection</button>
         </div>
       </div>
@@ -793,6 +717,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     </div>
   </div>
 </div>
+
 <!-- PPD SCREEN -->
 <div id="screen-ppd" class="screen">
   <div class="topnav">
@@ -805,8 +730,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <button class="nav-out" onclick="logout()">Sign Out</button>
   </div>
 
-  <!-- FILTER BAR -->
-  <<div style="background:var(--surf);border-bottom:1px solid var(--bdr);padding:10px 16px;display:flex;gap:8px;align-items:center;position:sticky;top:56px;z-index:90">
+  <!-- BUG FIX 2: Fixed <<div typo → <div (this was breaking the entire PPD filter bar) -->
+  <div style="background:var(--surf);border-bottom:1px solid var(--bdr);padding:10px 16px;display:flex;gap:8px;align-items:center;position:sticky;top:56px;z-index:90">
     <div style="display:flex;background:var(--lite);border-radius:8px;border:1.5px solid var(--bdr);overflow:hidden;flex-shrink:0">
       <button id="ppd-tab-overview" onclick="ppdToggle('overview')" style="padding:7px 14px;font-size:12px;font-weight:700;font-family:var(--font);border:none;cursor:pointer;background:var(--navy);color:#fff;transition:all .2s">Overview</button>
       <button id="ppd-tab-day" onclick="ppdToggle('day')" style="padding:7px 14px;font-size:12px;font-weight:700;font-family:var(--font);border:none;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s">Daily</button>
@@ -820,78 +745,79 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
   <div class="content" style="padding-bottom:24px">
 
-    <!-- KPI SUMMARY -->
-      <!-- PPD OVERVIEW PANEL -->
-  <div id="ppd-overview-panel" style="display:block">
+    <!-- PPD OVERVIEW PANEL -->
+    <div id="ppd-overview-panel" style="display:block">
 
-    <div style="background:var(--navy);border-radius:var(--r);padding:18px 20px;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">PPD District</div>
-      <div style="font-size:20px;font-weight:700;color:#fff" id="ov-ppd-name">—</div>
-      <div style="font-size:12px;color:rgba(255,255,255,.45);margin-top:3px" id="ov-ppd-sub">Loading…</div>
+      <div style="background:var(--navy);border-radius:var(--r);padding:18px 20px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">PPD District</div>
+        <div style="font-size:20px;font-weight:700;color:#fff" id="ov-ppd-name">—</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.45);margin-top:3px" id="ov-ppd-sub">Loading…</div>
+      </div>
+
+      <div class="sec-title">Today's Snapshot — <span id="ov-day-date">—</span></div>
+      <div class="sgrid ai">
+        <div class="scard accent">
+          <div class="slabel">Daily Rate</div>
+          <div class="sval" id="ov-day-rate">—</div>
+          <div class="ssub">of <span id="ov-day-enrolled">—</span> enrolled</div>
+        </div>
+        <div class="scard">
+          <div class="slabel">Present Today</div>
+          <div class="sval" id="ov-day-present">—</div>
+          <div class="ssub">students attending</div>
+        </div>
+        <div class="scard">
+          <div class="slabel">Submitted</div>
+          <div class="sval" id="ov-day-submitted">—</div>
+          <div class="ssub">of <span id="ov-day-total">—</span> schools</div>
+        </div>
+        <div class="scard">
+          <div class="slabel">Not Submitted</div>
+          <div class="sval" id="ov-day-missing" style="color:var(--red)">—</div>
+          <div class="ssub">pending today</div>
+        </div>
+      </div>
+
+      <div class="sec-title">This Month — <span id="ov-month-label">—</span></div>
+      <div class="sgrid ai">
+        <div class="scard accent">
+          <div class="slabel">Avg Monthly Rate</div>
+          <div class="sval" id="ov-month-rate">—</div>
+          <div class="ssub">across submitted schools</div>
+        </div>
+        <div class="scard">
+          <div class="slabel">Total Hadir</div>
+          <div class="sval" id="ov-month-present">—</div>
+          <div class="ssub">of <span id="ov-month-enrolled">—</span> enrolled</div>
+        </div>
+        <div class="scard">
+          <div class="slabel">Days Recorded</div>
+          <div class="sval" id="ov-month-days">—</div>
+          <div class="ssub">school days this month</div>
+        </div>
+        <div class="scard">
+          <div class="slabel">Intervention</div>
+          <div class="sval" id="ov-month-intervention" style="color:var(--red)">—</div>
+          <div class="ssub">schools &lt; 85%</div>
+        </div>
+      </div>
+
+      <div class="sec-title">School Performance This Month</div>
+      <div id="ov-school-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+      <div id="ov-empty" class="empty" style="display:none">
+        <div class="empty-icon">📭</div>
+        <h3>No submissions yet</h3>
+        <p>No schools have submitted this month.</p>
+      </div>
+
+      <button class="btn btn-p btn-full ai" onclick="printPPDOverview()" style="margin-bottom:12px">
+        🖨 Print Overview Report
+      </button>
     </div>
+    <!-- END PPD OVERVIEW PANEL -->
 
-    <div class="sec-title">Today's Snapshot — <span id="ov-day-date">—</span></div>
-    <div class="sgrid ai">
-      <div class="scard accent">
-        <div class="slabel">Daily Rate</div>
-        <div class="sval" id="ov-day-rate">—</div>
-        <div class="ssub">of <span id="ov-day-enrolled">—</span> enrolled</div>
-      </div>
-      <div class="scard">
-        <div class="slabel">Present Today</div>
-        <div class="sval" id="ov-day-present">—</div>
-        <div class="ssub">students attending</div>
-      </div>
-      <div class="scard">
-        <div class="slabel">Submitted</div>
-        <div class="sval" id="ov-day-submitted">—</div>
-        <div class="ssub">of <span id="ov-day-total">—</span> schools</div>
-      </div>
-      <div class="scard">
-        <div class="slabel">Not Submitted</div>
-        <div class="sval" id="ov-day-missing" style="color:var(--red)">—</div>
-        <div class="ssub">pending today</div>
-      </div>
-    </div>
-
-    <div class="sec-title">This Month — <span id="ov-month-label">—</span></div>
-    <div class="sgrid ai">
-      <div class="scard accent">
-        <div class="slabel">Avg Monthly Rate</div>
-        <div class="sval" id="ov-month-rate">—</div>
-        <div class="ssub">across submitted schools</div>
-      </div>
-      <div class="scard">
-        <div class="slabel">Total Hadir</div>
-        <div class="sval" id="ov-month-present">—</div>
-        <div class="ssub">of <span id="ov-month-enrolled">—</span> enrolled</div>
-      </div>
-      <div class="scard">
-        <div class="slabel">Days Recorded</div>
-        <div class="sval" id="ov-month-days">—</div>
-        <div class="ssub">school days this month</div>
-      </div>
-      <div class="scard">
-        <div class="slabel">Intervention</div>
-        <div class="sval" id="ov-month-intervention" style="color:var(--red)">—</div>
-        <div class="ssub">schools &lt; 85%</div>
-      </div>
-    </div>
-
-    <div class="sec-title">School Performance This Month</div>
-    <div id="ov-school-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
-    <div id="ov-empty" class="empty" style="display:none">
-      <div class="empty-icon">📭</div>
-      <h3>No submissions yet</h3>
-      <p>No schools have submitted this month.</p>
-    </div>
-
-    <button class="btn btn-p btn-full ai" onclick="printPPDOverview()" style="margin-bottom:80px">
-      🖨 Print Overview Report
-    </button>
-  </div>
-  <!-- END PPD OVERVIEW PANEL -->
-    <div class="sgrid ai" id="ppd-stats">
+    <!-- KPI STATS (shown on Day/Month tabs) -->
+    <div class="sgrid ai" id="ppd-stats" style="display:none">
       <div class="scard accent">
         <div class="slabel">PPD Rate</div>
         <div class="sval" id="ppd-rate">—</div>
@@ -915,7 +841,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     </div>
 
     <!-- KPI LEGEND -->
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+    <div id="ppd-kpi-legend" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:14px">
       <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(212,175,55,.15);color:#8a6d00;border:1px solid rgba(212,175,55,.3)">🏆 Platinum ≥95%</span>
       <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(26,95,156,.12);color:var(--blue);border:1px solid rgba(26,95,156,.2)">🥇 Gold ≥90%</span>
       <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(107,126,146,.12);color:#4a5568;border:1px solid rgba(107,126,146,.2)">🥈 Silver ≥85%</span>
@@ -928,7 +854,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <h3>No submissions yet</h3>
       <p>No schools have submitted for this period.</p>
     </div>
-    <div id="ppd-cards" style="display:flex;flex-direction:column;gap:10px"></div>
+    <div id="ppd-cards" style="display:none;flex-direction:column;gap:10px"></div>
 
   </div>
 </div>
@@ -946,7 +872,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       </button>
     </div>
     <div class="modal-body" style="padding:0">
-      <!-- Summary bar -->
       <div id="ppd-modal-summary" style="display:grid;grid-template-columns:repeat(3,1fr);background:var(--navy);padding:14px 16px;gap:8px">
         <div style="text-align:center">
           <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Rate</div>
@@ -961,7 +886,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <div id="ppd-modal-enrolled" style="font-size:22px;font-weight:700;color:#fff;font-family:var(--mono)">—</div>
         </div>
       </div>
-      <!-- Classroom table -->
       <div style="overflow-x:auto">
         <table class="dtable" style="font-size:13px">
           <thead>
@@ -1036,18 +960,23 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <tbody id="rpt-tbody"></tbody>
     </table>
     <div id="rpt-classrooms"></div>
-    <div class="rpt-foot">SiPPD Cloud System· Generated <span id="rpt-gen2">—</span></div>
+    <div class="rpt-foot">SiPPD Cloud System · Generated <span id="rpt-gen2">—</span></div>
   </div>
 </div>
 
 <div id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</script>
 <script>
+// ══════════════════════════════════════════════════
+// BUG FIX 4: Declare setupRowCounter at global scope
+// (was used in addSetupRow/loadSetupRows but never declared)
+// ══════════════════════════════════════════════════
+let setupRowCounter = 0;
+
 // ══════════════════════════════════════════════════
 // PPD DASHBOARD
 // ══════════════════════════════════════════════════
-let ppdMode = 'day'; // 'day' or 'month'
+let ppdMode = 'overview'; // BUG FIX 5: Start on 'overview' to match initial panel state
 
 function openPPD() {
   const ppd = CU.ppd;
@@ -1056,10 +985,9 @@ function openPPD() {
   document.getElementById('ppd-sub').textContent = ppd;
   document.getElementById('ppd-date').value = today();
   document.getElementById('ppd-month').value = today().slice(0, 7);
-  ppdMode = 'day';
-  ppdToggle('day');
+  ppdMode = 'overview';
+  ppdToggle('overview'); // BUG FIX 6: Load overview on open, not 'day'
   showScreen('screen-ppd');
-  loadPPDDashboard();
 }
 
 function ppdToggle(mode) {
@@ -1071,7 +999,7 @@ function ppdToggle(mode) {
     btn.style.background = mode === t ? 'var(--navy)' : 'transparent';
     btn.style.color      = mode === t ? '#fff' : 'var(--muted)';
   });
- 
+
   // Date pickers only show on day/month tabs
   document.getElementById('ppd-date').style.display  = mode === 'day'   ? 'block' : 'none';
   document.getElementById('ppd-month').style.display = mode === 'month' ? 'block' : 'none';
@@ -1084,6 +1012,10 @@ function ppdToggle(mode) {
   document.getElementById('ppd-overview-panel').style.display = mode === 'overview' ? 'block' : 'none';
   document.getElementById('ppd-stats').style.display           = mode !== 'overview' ? 'grid'  : 'none';
   document.getElementById('ppd-empty').style.display           = 'none';
+
+  // BUG FIX 7: Show/hide KPI legend alongside stats
+  const legendEl = document.getElementById('ppd-kpi-legend');
+  if (legendEl) legendEl.style.display = mode !== 'overview' ? 'flex' : 'none';
 
   const cardEl = document.getElementById('ppd-cards');
   if (cardEl) cardEl.style.display = mode !== 'overview' ? 'flex' : 'none';
@@ -1187,7 +1119,6 @@ async function loadPPDOverview() {
       document.getElementById('ov-month-days').textContent         = maxDays || '—';
       document.getElementById('ov-month-intervention').textContent = schoolRecords.length ? intervention : '—';
 
-      // School performance list
       const missingSchools = schools.filter(s => !map[s.code]);
       const rateColor = r => r >= 95 ? '#d4af37' : r >= 90 ? 'var(--blue)' : r >= 85 ? '#718096' : 'var(--red)';
 
@@ -1237,7 +1168,6 @@ async function loadPPDOverview() {
           </div>
         </div>`).join('');
 
-      // Store for print
       window._ovData = { schoolRecords, missingSchools, totP, totE, avgRate, maxDays, intervention, dateStr, monthLabel: yr+'-'+mo, ppd, schools };
     }
   } catch(e) { showToast('⚠ Error: ' + e.message); }
@@ -1265,7 +1195,6 @@ function printPPDOverview() {
       #ppd-ov-print { display:block!important; }
     }
     #ppd-ov-print { display:none; font-family:'DM Sans',sans-serif; font-size:13px; color:#1A2A3A; }
-    .pg { page-break-after:always; }
   </style>
   <div style="border-bottom:3px solid ${navy};padding-bottom:10px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-end">
     <div>
@@ -1347,6 +1276,7 @@ function printPPDOverview() {
   printDiv.innerHTML = html;
   setTimeout(() => window.print(), 150);
 }
+
 async function loadPPDDashboard() {
   const ppd = CU.ppd;
   const cfg = getSupaConfig();
@@ -1392,7 +1322,6 @@ async function loadPPDDashboard() {
               school_code:  r.school_code,
               school_name:  r.school_name,
               school_type:  r.school_type,
-              // Keep actual enrollment, not cumulative sum
               total_enrolled: r.total_enrolled,
               total_present:  0,
               total_absent:   0,
@@ -1404,7 +1333,7 @@ async function loadPPDDashboard() {
             };
           }
           const m = map[r.school_code];
-          m.total_enrolled  = r.total_enrolled; // always latest enrollment
+          m.total_enrolled  = r.total_enrolled;
           m.total_present  += r.total_present;
           m.total_absent   += r.total_absent;
           m.days           += 1;
@@ -1415,7 +1344,6 @@ async function loadPPDDashboard() {
             m.classrooms   = r.classrooms;
           }
         });
-        // Average daily rate across submitted days — correct monthly metric
         records = Object.values(map).map(s => ({
           ...s,
           attendance_rate: s.days > 0
@@ -1441,7 +1369,6 @@ function renderPPDCards(records, schools) {
   const submittedCodes = new Set(records.map(r => r.school_code));
   const missing = schools.filter(s => !submittedCodes.has(s.code));
 
-  // ── Overall stats: only from submitted schools, stats stay — if none submitted ──
   if (records.length) {
     let rateDisplay, totP, totE;
     if (ppdMode === 'month') {
@@ -1460,7 +1387,6 @@ function renderPPDCards(records, schools) {
     document.getElementById('ppd-enrolled').textContent     = totE;
     document.getElementById('ppd-intervention').textContent = intervention;
   } else {
-    // Nothing submitted yet — keep stats blank
     document.getElementById('ppd-rate').textContent         = '—';
     document.getElementById('ppd-present').textContent      = '—';
     document.getElementById('ppd-enrolled').textContent     = '—';
@@ -1615,20 +1541,17 @@ function printPPDReport() {
   const schools  = getSchools().filter(s => s.ppd_code === CU.ppd);
   const genTime  = new Date().toLocaleString('en-MY');
 
-  // ── Aggregate totals ──────────────────────────────
   const totE = records.reduce((a, r) => a + r.total_enrolled, 0);
   const totP = records.reduce((a, r) => a + r.total_present, 0);
   const totA = records.reduce((a, r) => a + r.total_absent,  0);
   const overallRate = totE > 0 ? (totP / totE * 100).toFixed(1) : '0.0';
   const subRate = records.length + ' / ' + schools.length;
 
-  // ── KPI buckets ───────────────────────────────────
   const platinum     = records.filter(r => r.attendance_rate >= 95).sort((a,b) => b.attendance_rate - a.attendance_rate);
   const gold         = records.filter(r => r.attendance_rate >= 90 && r.attendance_rate < 95).sort((a,b) => b.attendance_rate - a.attendance_rate);
   const silver       = records.filter(r => r.attendance_rate >= 85 && r.attendance_rate < 90).sort((a,b) => b.attendance_rate - a.attendance_rate);
   const intervention = records.filter(r => r.attendance_rate < 85).sort((a,b) => a.attendance_rate - b.attendance_rate);
 
-  // ── Class grouping helper (T1–T6 by first char) ───
   function groupClasses(classrooms) {
     const groups = {};
     (classrooms || []).forEach(c => {
@@ -1641,7 +1564,6 @@ function printPPDReport() {
     return groups;
   }
 
-  // ── CSS variables inlined for print isolation ─────
   const navy  = '#0D2137';
   const blue  = '#1A5F9C';
   const green = '#1DB87A';
@@ -1682,7 +1604,6 @@ function printPPDReport() {
     </table>`;
   }
 
-  // ── Page style shared ─────────────────────────────
   const pageStyle = `page-break-after:always;padding:16mm;font-family:'DM Sans',sans-serif;background:#fff;`;
   const hdStyle   = `border-bottom:3px solid ${navy};padding-bottom:10px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end`;
   const h1Style   = `font-size:18px;font-weight:700;color:${navy};margin:0 0 2px`;
@@ -1704,7 +1625,6 @@ function printPPDReport() {
     </div>`;
   }
 
-  // ══ PAGE 1: Cover ═════════════════════════════════
   const page1 = `<div style="${pageStyle}display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:190mm">
     <div style="text-align:center;max-width:180mm">
       <div style="font-size:48px;margin-bottom:16px">📊</div>
@@ -1738,7 +1658,6 @@ function printPPDReport() {
     </div>
   </div>`;
 
-  // ══ PAGE 2: KPI Legend ════════════════════════════
   const page2 = `<div style="${pageStyle}">
     ${pageHeader('Legenda KPI', ppdMode === 'month' ? monthVal : dateVal)}
     <div style="${h2Style}">Tahap Prestasi KPI Kehadiran</div>
@@ -1774,7 +1693,6 @@ function printPPDReport() {
     </div>
   </div>`;
 
-  // ══ PAGE 3: Intervention Table ════════════════════
   const page3 = `<div style="${pageStyle}">
     ${pageHeader('Jadual Intervensi', ppdMode === 'month' ? monthVal : dateVal)}
     <div style="${h2Style}">Sekolah Memerlukan Intervensi (Kadar &lt; 85%)</div>
@@ -1815,28 +1733,24 @@ function printPPDReport() {
     }
   </div>`;
 
-  // ══ PAGE 4: Platinum ══════════════════════════════
   const page4 = `<div style="${pageStyle}">
     ${pageHeader('Sekolah Platinum ≥ 95%', ppdMode === 'month' ? monthVal : dateVal)}
     <div style="${h2Style}">🏆 Platinum — Kadar Kehadiran ≥ 95%</div>
     ${rankedTable(platinum)}
   </div>`;
 
-  // ══ PAGE 5: Gold ══════════════════════════════════
   const page5 = `<div style="${pageStyle}">
     ${pageHeader('Sekolah Gold 90–94.9%', ppdMode === 'month' ? monthVal : dateVal)}
     <div style="${h2Style}">🥇 Gold — Kadar Kehadiran 90% hingga 94.9%</div>
     ${rankedTable(gold)}
   </div>`;
 
-  // ══ PAGE 6: Silver ════════════════════════════════
   const page6 = `<div style="${pageStyle}">
     ${pageHeader('Sekolah Silver 85–89.9%', ppdMode === 'month' ? monthVal : dateVal)}
     <div style="${h2Style}">🥈 Silver — Kadar Kehadiran 85% hingga 89.9%</div>
     ${rankedTable(silver)}
   </div>`;
 
-  // ══ PAGE 7: Overall Analysis ══════════════════════
   const skRecords  = records.filter(r => (r.school_type||'').toUpperCase() === 'SK');
   const skE = skRecords.reduce((a,r) => a + r.total_enrolled, 0);
   const skP = skRecords.reduce((a,r) => a + r.total_present, 0);
@@ -1893,8 +1807,6 @@ function printPPDReport() {
     </table>
   </div>`;
 
-  // ══ PAGE 8: SK Breakdown Table ════════════════════
-  // Group all class levels across all schools
   const allLevels = new Set();
   records.forEach(r => (r.classrooms||[]).forEach(c => allLevels.add(c.name.charAt(0))));
   const levels = [...allLevels].sort();
@@ -1906,13 +1818,13 @@ function printPPDReport() {
       <table style="border-collapse:collapse;font-size:10px;min-width:100%">
         <thead>
           <tr>
-            <th style="background:${navy};color:#fff;padding:6px 8px;text-align:left;white-space:nowrap;position:sticky;left:0">Tahap</th>
+            <th style="background:${navy};color:#fff;padding:6px 8px;text-align:left;white-space:nowrap">Tahap</th>
             ${records.map(r => `<th style="background:${navy};color:#fff;padding:6px 8px;text-align:center;white-space:nowrap;max-width:80px;overflow:hidden">${esc(r.school_name.replace(/^(SK|SMK|SJKC|SJKT|SABK|SMKA)\s*/i,''))}</th>`).join('')}
           </tr>
         </thead>
         <tbody>
           ${levels.map((lv,li) => `<tr style="background:${li%2===0?'#f8fafc':'#fff'}">
-            <td style="padding:6px 8px;font-weight:700;color:${navy};white-space:nowrap;position:sticky;left:0;background:inherit">T${lv}</td>
+            <td style="padding:6px 8px;font-weight:700;color:${navy};white-space:nowrap">T${lv}</td>
             ${records.map(r => {
               const grp = groupClasses(r.classrooms);
               const g = grp[lv];
@@ -1923,7 +1835,7 @@ function printPPDReport() {
             }).join('')}
           </tr>`).join('')}
           <tr style="background:${navy}">
-            <td style="padding:6px 8px;font-weight:700;color:#fff;position:sticky;left:0;background:${navy}">JUMLAH</td>
+            <td style="padding:6px 8px;font-weight:700;color:#fff">JUMLAH</td>
             ${records.map(r => `<td style="padding:6px 8px;text-align:center;font-weight:700;color:${rateColor(r.attendance_rate)}">${r.attendance_rate.toFixed(1)}%</td>`).join('')}
           </tr>
         </tbody>
@@ -1931,7 +1843,6 @@ function printPPDReport() {
     </div>
   </div>`;
 
-  // ── Inject & print ────────────────────────────────
   let printDiv = document.getElementById('print-area-ppd');
   if (!printDiv) {
     printDiv = document.createElement('div');
@@ -1951,9 +1862,9 @@ function printPPDReport() {
     ${page1}${page2}${page3}${page4}${page5}${page6}${page7}${page8}
   `;
 
-  // Small delay so browser renders the DOM before printing
   setTimeout(() => window.print(), 150);
 }
+
 // ══════════════════════════════════════════════════
 // CALENDAR HELPERS
 // ══════════════════════════════════════════════════
@@ -1982,11 +1893,11 @@ function renderCalendar(){
   document.getElementById('cal-title').textContent = title;
 
   const grid = document.getElementById('cal-grid');
-  grid.innerHTML = ''; // ← NO day headers here, they're in HTML already
+  grid.innerHTML = '';
 
   const firstDay = new Date(calYear, calMonth, 1).getDay();
   const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
-  const today = new Date().toISOString().slice(0,10);
+  const todayDate = new Date().toISOString().slice(0,10);
   const selected = document.getElementById('t-date').value;
   const startOffset = (firstDay === 0 ? 6 : firstDay - 1);
 
@@ -1999,8 +1910,8 @@ function renderCalendar(){
     const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const dayOfWeek = new Date(calYear, calMonth, d).getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const isPast = dateStr < today;
-    const isToday = dateStr === today;
+    const isPast = dateStr < todayDate;
+    const isToday = dateStr === todayDate;
     const isSelected = dateStr === selected;
     const hasRecord = code ? !!getRecord(code, dateStr) : false;
 
@@ -2028,26 +1939,12 @@ function renderCalendar(){
 
 function selectCalDate(dateStr){
   document.getElementById('t-date').value = dateStr;
-  renderCalendar(); // re-render to update selected highlight
+  renderCalendar();
   loadAttendanceForm();
 }
-// ══════════════════════════════════════════════════
-// HASHPASSWORD  CONFIG 
-// ══════════════════════════════════════════════════
-async function hashPassword(password){
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-// ══════════════════════════════════════════════════
-// SUPABASE CONFIG 
-// ══════════════════════════════════════════════════
 
 // ══════════════════════════════════════════════════
-// DEFAULT SCHOOLS LIST
+// SUPABASE CONFIG
 // ══════════════════════════════════════════════════
 const DEFAULT_SCHOOLS = [];
 
@@ -2064,7 +1961,6 @@ function getUsers(){return S.get('sars_users',[])}
 function saveUsers(u){S.set('sars_users',u)}
 function getSchools(){return S.get('sars_schools',DEFAULT_SCHOOLS)}
 function saveSchools(s){S.set('sars_schools',s)}
-// BUG FIX: getSupaConfig now returns correct default structure
 function getSupaConfig(){return S.get('sars_supa',{url:'',key:'',table:'attendance'})}
 function saveSupaConf(c){S.set('sars_supa',c)}
 
@@ -2083,10 +1979,8 @@ function getAllRecords(){
 }
 function getRecordsForDate(date){return getAllRecords().filter(r=>r.date===date)}
 
-async function initDefaults() {
-  // Schools come from Supabase via background sync in DOMContentLoaded
-  // Nothing to seed locally
-}
+async function initDefaults() {}
+
 // ══════════════════════════════════════════════════
 // SESSION
 // ══════════════════════════════════════════════════
@@ -2117,7 +2011,6 @@ async function doLogin() {
     } catch(e) { /* fall through to localStorage */ }
   }
 
-  // Fallback: localStorage (for first-run admin bootstrap)
   if (!user) user = getUsers().find(u => u.username === username) || null;
 
   if (!user || user.password !== password) {
@@ -2132,9 +2025,10 @@ async function doLogin() {
   localStorage.setItem('sars_session', JSON.stringify(CU));
   showLanding();
 }
+
 function logout(){
   CU=null;
-  localStorage.removeItem('sars_session'); // ADD THIS
+  localStorage.removeItem('sars_session');
   showScreen('screen-login');
   document.getElementById('l-user').value='';
   document.getElementById('l-pass').value='';
@@ -2151,22 +2045,19 @@ function showLanding(){
   if(CU.role==='teacher'||CU.role==='admin')
     html+=`<div class="role-card" onclick="openTeacher()"><div class="rc-icon">🏫</div><h3>Teacher</h3><p>Submit daily attendance</p></div>`;
   if(CU.role==='ppd'||CU.role==='admin')
-  html+=`<div class="role-card" onclick="openPPD()"><div class="rc-icon">📋</div><h3>PPD Dashboard</h3><p>Monitor your district schools</p></div>`;
+    html+=`<div class="role-card" onclick="openPPD()"><div class="rc-icon">📋</div><h3>PPD Dashboard</h3><p>Monitor your district schools</p></div>`;
   if(CU.role==='admin')
-  html+=`<div class="role-card" onclick="openOfficer()"><div class="rc-icon">🏛</div><h3>JPN Dashboard</h3><p>View all districts</p></div>`;
+    html+=`<div class="role-card" onclick="openOfficer()"><div class="rc-icon">🏛</div><h3>JPN Dashboard</h3><p>View all districts</p></div>`;
   if(CU.role==='admin')
     html+=`<div class="role-card" onclick="openAdmin()" style="grid-column:span 2;background:rgba(240,165,0,.1);border-color:rgba(240,165,0,.25)"><div class="rc-icon">🔑</div><h3>Admin Panel</h3><p>Users · Schools · Supabase config</p></div>`;
   c.innerHTML=html;
-  // ← ADD THESE 3 LINES HERE
   const cardCount = c.querySelectorAll('.role-card').length;
   c.classList.toggle('single', cardCount === 1);
   showScreen('screen-landing');
 }
 
 function goHome(){if(CU)showLanding();else showScreen('screen-login')}
-// ══════════════════════════════════════════════════
-// TOGGLE PASSWORD VISIBILITY
-// ══════════════════════════════════════════════════
+
 function togglePw() {
   const input = document.getElementById('l-pass');
   const btn = document.querySelector('.pw-eye svg');
@@ -2178,6 +2069,7 @@ function togglePw() {
     btn.style.opacity = '0.5';
   }
 }
+
 // ══════════════════════════════════════════════════
 // TEACHER
 // ══════════════════════════════════════════════════
@@ -2198,6 +2090,7 @@ function openTeacher(){
   showScreen('screen-teacher');
   initCalendar();
 }
+
 function addSetupRow(name='',enrolled=''){
   setupRowCounter++;
   const id='sr'+setupRowCounter;
@@ -2209,11 +2102,13 @@ function addSetupRow(name='',enrolled=''){
     <button class="cs-del" onclick="delSetupRow('${id}')"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>`;
   document.getElementById('setup-rows').appendChild(div);
 }
+
 function delSetupRow(id){
   const list=document.getElementById('setup-rows');
   if(list.children.length<=1){showToast('⚠ Need at least one class.');return}
   document.getElementById(id)?.remove();
 }
+
 async function saveSetup(){
   const code=CU._school?.code;
   const errEl=document.getElementById('setup-err');
@@ -2230,14 +2125,12 @@ async function saveSetup(){
   });
   if(!ok)return;
 
-  // Save locally first (fast)
   saveSetup2(code,classes);
 
-  // Then push to Supabase
   const btn = document.querySelector('#tc-setup button');
   if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
   const result = await saveSetupToSupabase(code, classes);
-  if(btn){ btn.disabled=false; btn.textContent='💾 Save as Default'; }
+  if(btn){ btn.disabled=false; btn.textContent='💾 Save as Default Setup'; }
 
   if(result.ok){
     showToast('✓ Setup saved to Supabase!');
@@ -2246,6 +2139,7 @@ async function saveSetup(){
   }
   loadAttendanceForm();
 }
+
 function loadSetupRows(){
   const code = CU._school?.code;
   if(!code) return;
@@ -2256,6 +2150,7 @@ function loadSetupRows(){
     classes.forEach(cls => addSetupRow(cls.name, cls.enrolled));
   }
 }
+
 function tTab(tab){
   ['att','setup','hist'].forEach(t=>{
     const content = document.getElementById('tc-'+t);
@@ -2268,11 +2163,10 @@ function tTab(tab){
   if(activeContent) activeContent.style.display='block';
   if(activeBtn) activeBtn.classList.add('active');
 
-  // Load data when switching tabs
   if(tab==='setup') loadSetupRows();
   if(tab==='hist') loadHistory();
 }
-// ATTENDANCE FORM
+
 function loadAttendanceForm(){
   const code=CU._school?.code;
   if(!code)return;
@@ -2316,7 +2210,6 @@ function loadAttendanceForm(){
   document.getElementById('t-att-err').style.display='none';
   document.getElementById('t-sync-status').textContent='';
 
-  // Re-render calendar to reflect green/red status
   if(document.getElementById('cal-grid')) renderCalendar();
 }
 
@@ -2371,7 +2264,6 @@ async function saveAttendance(){
     return;
   }
 
-  // Prevent future date submission
   if(date > today()){
     errEl.textContent='⚠ Cannot submit attendance for a future date.';
     errEl.style.display='flex';
@@ -2467,7 +2359,7 @@ function showSubmittedSummary(record){
       </div>
     </div>`;
 }
-// HISTORY
+
 function loadHistory(){
   const code=CU._school?.code;
   if(!code)return;
@@ -2501,6 +2393,7 @@ function openOfficer(){
   loadDashboard();
   showScreen('screen-officer');
 }
+
 function loadDashboard(){
   const date=document.getElementById('off-date').value;
   document.getElementById('off-datelabel').textContent=fmtDate(date);
@@ -2584,7 +2477,6 @@ function aTab(tab){
   document.getElementById('ab-'+tab).classList.add('active');
 }
 
-// ADMIN USERS
 function loadAdminUsers(){
   const users=getUsers();
   document.getElementById('adm-total').textContent=users.length;
@@ -2620,7 +2512,6 @@ async function addUser() {
   const display = document.getElementById('au-display').value.trim();
   const schoolInput = document.querySelector('#au-school-custom input');
   const school = schoolInput ? schoolInput.dataset.code || null : null;
-  console.log('school value:', school);
   const errEl = document.getElementById('au-err');
   errEl.style.display = 'none';
 
@@ -2644,7 +2535,6 @@ async function addUser() {
     createdAt: new Date().toISOString()
   };
 
-  // Save to Supabase via API
   const result = await saveUserToSupabase(newUser);
   if (!result.ok) {
     errEl.textContent = `⚠ Failed to save: ${result.error}`;
@@ -2652,7 +2542,6 @@ async function addUser() {
     return;
   }
 
-  // Only update local cache after Supabase succeeds
   users.push(newUser);
   saveUsers(users);
 
@@ -2662,7 +2551,6 @@ async function addUser() {
   showToast(`✓ User "${username}" created`);
 }
 
-// NEW: inserts single user via API
 async function saveUserToSupabase(user) {
   const cfg = getSupaConfig();
   if (!cfg.url || !cfg.key) return { ok: false, error: 'Supabase not configured' };
@@ -2709,7 +2597,6 @@ async function saveEdit(){
   const role = document.getElementById('eu-role').value;
   const school = document.getElementById('eu-school').value || null;
   const ppd = document.getElementById('eu-ppd').value || null;
-  const jpn    = document.getElementById('eu-jpn')?.value || null;
   const newPass = document.getElementById('eu-pass').value;
   const errEl = document.getElementById('eu-err');
   errEl.style.display = 'none';
@@ -2733,7 +2620,6 @@ async function saveEdit(){
 
   const cfg = getSupaConfig();
 
-  // ✅ PATCH only this one user
   if(cfg.url && cfg.key){
     const res = await fetch(`${cfg.url}/rest/v1/sars_users?username=eq.${orig}`, {
       method: 'PATCH',
@@ -2753,7 +2639,6 @@ async function saveEdit(){
     }
   }
 
-  // ✅ Only update localStorage after Supabase succeeds
   const updatedUser = { ...users.find(u => u.username === orig), ...payload };
   users = users.map(u => u.username === orig ? updatedUser : u);
   saveUsers(users);
@@ -2783,14 +2668,12 @@ async function deleteUser(username){
     }
   }
 
-  // ✅ Only remove locally after Supabase succeeds
   const users = getUsers().filter(u => u.username !== username);
   saveUsers(users);
   loadAdminUsers();
   showToast(`🗑 User "${username}" deleted`);
 }
 
-// ADMIN SCHOOLS
 function loadAdminSchools(){
   const schools=getSchools();
   document.getElementById('adm-slist').innerHTML=schools.map(s=>`
@@ -2836,7 +2719,6 @@ async function deleteSchool(code){
 
   const cfg = getSupaConfig();
 
-  // ✅ DELETE only this specific school by code (with filter)
   if(cfg.url && cfg.key){
     await fetch(`${cfg.url}/rest/v1/sars_schools?code=eq.${code}`, {
       method: 'DELETE',
@@ -2847,11 +2729,9 @@ async function deleteSchool(code){
     });
   }
 
-  // Update localStorage
   const schools = getSchools().filter(s => s.code !== code);
   saveSchools(schools);
 
-  // CASCADE: delete attendance records from localStorage
   const keys = [];
   for(let i = 0; i < localStorage.length; i++){
     const k = localStorage.key(i);
@@ -2859,7 +2739,6 @@ async function deleteSchool(code){
   }
   keys.forEach(k => localStorage.removeItem(k));
 
-  // Delete class setup from localStorage + Supabase
   localStorage.removeItem(`sars_setup_${code}`);
   if(cfg.url && cfg.key){
     fetch(`${cfg.url}/rest/v1/class_setup?school_code=eq.${code}`, {
@@ -2878,15 +2757,13 @@ async function deleteSchool(code){
 
 function populateSchoolSelects(targetId=null, selected=null){
   const schools=getSchools();
-  
+
   const buildSelect = (elId, sel='') => {
     const el = document.getElementById(elId);
     if(!el) return;
-    
-    // Replace <select> with a searchable dropdown
+
     el.style.display='none';
-    
-    // Remove old custom dropdown if exists
+
     const oldDrop = document.getElementById(elId+'-custom');
     if(oldDrop) oldDrop.remove();
 
@@ -2898,23 +2775,21 @@ function populateSchoolSelects(targetId=null, selected=null){
     input.type='text';
     input.placeholder='Search school…';
     input.value=sel?schools.find(s=>s.code===sel)?.name||'':'';
-    input.style.cssText='width:100%;box-sizing:border-box;';
-    input.className='form-input'; // use your existing input style
+    input.style.cssText='width:100%;box-sizing:border-box;padding:11px 14px;border:1.5px solid var(--bdr);border-radius:var(--rs);font-family:var(--font);font-size:15px;';
 
     const dropdown = document.createElement('div');
     dropdown.style.cssText='position:absolute;z-index:999;background:#fff;border:1px solid #ddd;border-radius:8px;width:100%;max-height:200px;overflow-y:auto;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1);';
 
     const renderOptions = (filter='') => {
       dropdown.innerHTML='';
-      // Not applicable option
       const none = document.createElement('div');
       none.textContent='— Not applicable —';
       none.style.cssText='padding:10px 14px;cursor:pointer;color:#999;font-size:13px;';
-      none.onmousedown=()=>{ 
-        input.value=''; 
+      none.onmousedown=()=>{
+        input.value='';
         input.dataset.code='';
-        el.value=''; 
-        dropdown.style.display='none'; 
+        el.value='';
+        dropdown.style.display='none';
       };
       dropdown.appendChild(none);
 
@@ -2929,7 +2804,7 @@ function populateSchoolSelects(targetId=null, selected=null){
           opt.onmouseout=()=>opt.style.background= s.code===el.value?'#f0f7ff':'';
           opt.onmousedown=()=>{
             input.value=s.name;
-            input.dataset.code=s.code; // store code on input itself
+            input.dataset.code=s.code;
             el.value=s.code;
             dropdown.style.display='none';
           };
@@ -2941,7 +2816,6 @@ function populateSchoolSelects(targetId=null, selected=null){
     input.oninput=()=>{ renderOptions(input.value); dropdown.style.display='block'; el.value=''; };
     input.onblur=()=>{ setTimeout(()=>dropdown.style.display='none', 150); };
 
-    // Set initial value
     if(sel) el.value=sel;
 
     wrapper.appendChild(input);
@@ -2955,6 +2829,7 @@ function populateSchoolSelects(targetId=null, selected=null){
     ['au-school','eu-school'].forEach(id=>buildSelect(id));
   }
 }
+
 // ══════════════════════════════════════════════════
 // JPN / PPD SEARCHABLE DROPDOWNS
 // ══════════════════════════════════════════════════
@@ -2977,7 +2852,7 @@ function filterJPNOptions(){
     .filter(j=>j.name.toLowerCase().includes(filter)||j.code.toLowerCase().includes(filter))
     .map(j=>`
       <div style="padding:10px 14px;cursor:pointer;font-size:13px;"
-        onmouseover="this.style.background='#f5f5f5'" 
+        onmouseover="this.style.background='#f5f5f5'"
         onmouseout="this.style.background=''"
         onmousedown="selectJPN('${j.code}','${esc(j.name)}')">
         ${esc(j.name)}
@@ -2988,7 +2863,6 @@ function selectJPN(code, name){
   document.getElementById('sc-jpn').value=code;
   document.getElementById('sc-jpn-search').value=name;
   document.getElementById('sc-jpn-opts').style.display='none';
-  // Enable PPD and reset it
   const ppdSearch=document.getElementById('sc-ppd-search');
   ppdSearch.disabled=false;
   ppdSearch.placeholder='Search PPD…';
@@ -3027,94 +2901,16 @@ function selectPPD(code, name){
 }
 
 function populateJPNSelects(){
-  // Just ensures JPN data is loaded — dropdowns are search-based
   const jpnList=getJPN();
-  if(!jpnList.length) showToast('⚠ No JPN data found');
+  if(!jpnList.length) console.warn('No JPN data found');
 }
+
 // ══════════════════════════════════════════════════
 // JPN & PPD HELPERS
 // ══════════════════════════════════════════════════
 function getJPN(){return S.get('sars_jpn',[])}
 function saveJPN(j){S.set('sars_jpn',j)}
 function getPPD(){return S.get('sars_ppd',[])}
-function savePPD(p){S.set('sars_ppd',p)}
-
-async function getJPNFromSupabase(){
-  const cfg=getSupaConfig();
-  if(!cfg.url||!cfg.key) return null;
-  try{
-    const res=await fetch(`${cfg.url}/rest/v1/sars_jpn?order=name`,{
-      headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key}
-    });
-    if(!res.ok) return null;
-    return await res.json();
-  } catch{ return null; }
-}
-
-async function getPPDFromSupabase(){
-  const cfg=getSupaConfig();
-  if(!cfg.url||!cfg.key) return null;
-  try{
-    const res=await fetch(`${cfg.url}/rest/v1/sars_ppd?order=name`,{
-      headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key}
-    });
-    if(!res.ok) return null;
-    return await res.json();
-  } catch{ return null; }
-}
-// ══════════════════════════════════════════════════
-// BUG FIX 1: loadSupaForm now correctly reads from getSupaConfig()
-// instead of referencing undefined variables SUPABASE_URL/SUPABASE_KEY/TABLE_NAME
-// ══════════════════════════════════════════════════
-function loadSupaForm() {
-  const cfg = getSupaConfig();
-  const connected = !!(cfg.url && cfg.key);
-  
-  const dot = document.getElementById('sb-status-dot');
-  const txt = document.getElementById('sb-status-text');
-  
-  if (dot) dot.style.background = connected ? '#1DB87A' : '#E63946';
-  if (txt) txt.textContent = connected
-    ? `✅ Connected — ${cfg.url}`
-    : '❌ Not connected — check Vercel env vars';
-}
-
-async function reconnectSupabase() {
-  showToast('Reconnecting…');
-  try {
-    const res = await fetch('/api/supaconfig');
-    const cfg = await res.json();
-    if (cfg.url && cfg.key) {
-      saveSupaConf(cfg);
-      loadSupaForm();
-      showToast('✅ Reconnected successfully!');
-    } else {
-      document.getElementById('sb-status-dot').style.background = '#E63946';
-      document.getElementById('sb-status-text').textContent = '❌ Missing env vars on server';
-      showToast('❌ Check Vercel env vars');
-    }
-  } catch(e) {
-    showToast('❌ Network error: ' + e.message);
-  }
-}
-
-function saveSupaConfig(){
-  const url=document.getElementById('sb-url').value.trim();
-  const key=document.getElementById('sb-key').value.trim();
-  const table=document.getElementById('sb-table').value.trim()||'attendance';
-  const errEl=document.getElementById('sb-err');
-  const okEl=document.getElementById('sb-ok');
-  errEl.style.display='none';okEl.style.display='none';
-  if(!url||!key){errEl.textContent='⚠ URL and Key are required.';errEl.style.display='flex';return}
-  if(!url.startsWith('https://')){errEl.textContent='⚠ URL must start with https://';errEl.style.display='flex';return}
-  saveSupaConf({url,key,table});
-  okEl.style.display='flex';
-  showToast('✓ Supabase config saved');
-}
-// ══════════════════════════════════════════════════
-// JPN & PPD HELPERS
-// ══════════════════════════════════════════════════
-function saveJPN(j){S.set('sars_jpn',j)}
 function savePPD(p){S.set('sars_ppd',p)}
 
 async function getJPNFromSupabase(){
@@ -3149,7 +2945,6 @@ async function saveSetupToSupabase(code, classes) {
   if (!cfg.url || !cfg.key) return { ok: false };
   const payload = { school_code: code, classes, updated_at: new Date().toISOString() };
   try {
-    // Try PATCH first — update existing row
     const patch = await fetch(
       `${cfg.url}/rest/v1/class_setup?school_code=eq.${code}`,
       {
@@ -3165,7 +2960,6 @@ async function saveSetupToSupabase(code, classes) {
     );
     if (patch.ok) return { ok: true };
 
-    // No existing row — INSERT
     const post = await fetch(
       `${cfg.url}/rest/v1/class_setup`,
       {
@@ -3195,10 +2989,18 @@ async function loadSetupFromSupabase(code){
     return data[0]?.classes||null;
   } catch{ return null; }
 }
-// ══════════════════════════════════════════════════
-// BUG FIX 2: testSupabase now reads LIVE input values from the form fields
-// so you can test before/without saving, and unsaved changes are also tested
-// ══════════════════════════════════════════════════
+
+function loadSupaForm() {
+  const cfg = getSupaConfig();
+  // Populate form fields with saved config
+  const urlEl = document.getElementById('sb-url');
+  const keyEl = document.getElementById('sb-key');
+  const tableEl = document.getElementById('sb-table');
+  if(urlEl) urlEl.value = cfg.url || '';
+  if(keyEl) keyEl.value = cfg.key || '';
+  if(tableEl) tableEl.value = cfg.table || 'attendance';
+}
+
 async function testSupabase(){
   const url   = document.getElementById('sb-url').value.trim();
   const key   = document.getElementById('sb-key').value.trim();
@@ -3270,7 +3072,6 @@ async function pushToSupabase(record){
       attendance_rate:record.attendance_rate,
       classrooms:record.classrooms,
     };
-    // PATCH first — update existing record
     const patchRes=await fetch(`${cfg.url}/rest/v1/${cfg.table}?school_code=eq.${record.school_code}&date=eq.${record.date}`,{
       method:'PATCH',
       headers:{
@@ -3282,9 +3083,8 @@ async function pushToSupabase(record){
       body:JSON.stringify(payload),
     });
     if(patchRes.ok) return{ok:true};
-    // Fallback POST — insert new record
     const postRes=await fetch(`${cfg.url}/rest/v1/${cfg.table}`,{
-      method:'POST', // use POST for inserting new records
+      method:'POST',
       headers:{
         'apikey':cfg.key,
         'Authorization':'Bearer '+cfg.key,
@@ -3298,6 +3098,7 @@ async function pushToSupabase(record){
     return{ok:false,error:`HTTP ${postRes.status}: ${body.slice(0,80)}`};
   }catch(e){return{ok:false,error:e.message}}
 }
+
 // ══════════════════════════════════════════════════
 // EXPORT / PRINT
 // ══════════════════════════════════════════════════
@@ -3348,18 +3149,16 @@ function clearCache(){
   keys.forEach(k=>localStorage.removeItem(k));
   showToast(`🗑 Cleared ${keys.length} record(s)`);
 }
+
 // ══════════════════════════════════════════════════
-// SCHOOL SETTINGS
+// SCHOOL / USER SUPABASE SYNC
 // ══════════════════════════════════════════════════
 async function getSchoolsFromSupabase(){
   const cfg = getSupaConfig();
   if(!cfg.url||!cfg.key) return null;
   try{
     const res = await fetch(`${cfg.url}/rest/v1/sars_schools`,{
-      headers:{
-        'apikey': cfg.key,
-        'Authorization': 'Bearer ' + cfg.key,
-      }
+      headers:{'apikey': cfg.key,'Authorization': 'Bearer ' + cfg.key}
     });
     if(!res.ok) return null;
     return await res.json();
@@ -3376,25 +3175,20 @@ async function saveSchoolsToSupabase(schools){
         'apikey': cfg.key,
         'Authorization': 'Bearer ' + cfg.key,
         'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates', // ✅ upsert, never mass-delete
+        'Prefer': 'resolution=merge-duplicates',
       },
       body: JSON.stringify(schools),
     });
     return {ok: res.ok};
   } catch(e){ return {ok: false, error: e.message}; }
 }
-// ══════════════════════════════════════════════════
-// USER SETTINGS
-// ══════════════════════════════════════════════════
+
 async function getUsersFromSupabase(){
   const cfg = getSupaConfig();
   if(!cfg.url||!cfg.key) return null;
   try{
     const res = await fetch(`${cfg.url}/rest/v1/sars_users`,{
-      headers:{
-        'apikey': cfg.key,
-        'Authorization': 'Bearer ' + cfg.key,
-      }
+      headers:{'apikey': cfg.key,'Authorization': 'Bearer ' + cfg.key}
     });
     if(!res.ok) return null;
     return await res.json();
@@ -3419,6 +3213,20 @@ async function saveUsersToSupabase(users){
   } catch(e){ return {ok: false, error: e.message}; }
 }
 
+function saveSupaConfig(){
+  const url=document.getElementById('sb-url').value.trim();
+  const key=document.getElementById('sb-key').value.trim();
+  const table=document.getElementById('sb-table').value.trim()||'attendance';
+  const errEl=document.getElementById('sb-err');
+  const okEl=document.getElementById('sb-ok');
+  errEl.style.display='none';okEl.style.display='none';
+  if(!url||!key){errEl.textContent='⚠ URL and Key are required.';errEl.style.display='flex';return}
+  if(!url.startsWith('https://')){errEl.textContent='⚠ URL must start with https://';errEl.style.display='flex';return}
+  saveSupaConf({url,key,table});
+  okEl.style.display='flex';
+  showToast('✓ Supabase config saved');
+}
+
 // ══════════════════════════════════════════════════
 // UTILITIES
 // ══════════════════════════════════════════════════
@@ -3437,54 +3245,6 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function genId(){return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&0x3|0x8)).toString(16)})}
 
 // ══════════════════════════════════════════════════
-// INDICATOR LIGHTS
-// ══════════════════════════════════════════════════
-// Green dot on date if already submitted
-function updateDateIndicator(date){
-  const code=CU._school?.code;
-  const existing=getRecord(code,date);
-  const badge=document.getElementById('t-att-badge');
-  if(existing){
-    badge.innerHTML=`<span style="background:#e8f8f2;color:#1DB87A;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px">✅ Saved ${fmtTime(existing.submitted_at)}</span>`;
-  } else {
-    badge.innerHTML='';
-  }
-}
-
-// Show submitted data summary below the form
-function showSubmittedSummary(record){
-  let el=document.getElementById('t-submitted-summary');
-  if(!el){
-    el=document.createElement('div');
-    el.id='t-submitted-summary';
-    document.getElementById('t-att-actions').after(el);
-  }
-  el.innerHTML=`
-    <div class="card ai" style="margin-bottom:80px">
-      <div class="card-hd" style="cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
-        <div class="c-icon" style="background:#e8f8f2">📋</div>
-        <h3>Submitted Data</h3>
-        <span style="margin-left:auto;font-size:12px;color:var(--muted)">${fmtDate(record.date)} · tap to expand</span>
-      </div>
-      <div style="display:none;padding:12px 16px">
-        <div style="font-size:13px;color:var(--muted);margin-bottom:8px">Submitted by <strong>${record.submitted_by}</strong> at ${fmtTime(record.submitted_at)}</div>
-        ${record.classrooms.map(c=>`
-          <div style="display:grid;grid-template-columns:1fr 60px 60px 60px;gap:8px;padding:8px 0;border-bottom:1px solid var(--bdr);font-size:13px;align-items:center">
-            <span>${esc(c.name)}</span>
-            <span style="text-align:center;color:var(--muted)">${c.enrolled}</span>
-            <span style="text-align:center;color:var(--green);font-weight:600">${c.present}</span>
-            <span style="text-align:center;font-weight:600">${c.rate}%</span>
-          </div>`).join('')}
-        <div style="display:grid;grid-template-columns:1fr 60px 60px 60px;gap:8px;padding:10px 0;font-size:13px;font-weight:700">
-          <span>TOTAL</span>
-          <span style="text-align:center">${record.total_enrolled}</span>
-          <span style="text-align:center;color:var(--green)">${record.total_present}</span>
-          <span style="text-align:center">${record.attendance_rate}%</span>
-        </div>
-      </div>
-    </div>`;
-}
-// ══════════════════════════════════════════════════
 // ROLE-CONDITIONAL FORM LOGIC
 // ══════════════════════════════════════════════════
 function onRoleChange(prefix) {
@@ -3502,6 +3262,7 @@ function populatePPDSelect(elId, selected = '') {
   el.innerHTML = '<option value="">— Select PPD —</option>' +
     ppds.map(p => `<option value="${esc(p.code)}" ${p.code === selected ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
 }
+
 // ══════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════
@@ -3516,7 +3277,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     showScreen('screen-login');
   }
 
-  // Use config already saved by admin in localStorage
   const cfg = getSupaConfig();
   if (cfg.url && cfg.key) {
     try {
@@ -3531,7 +3291,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (remoteJPN?.length)     saveJPN(remoteJPN);
       if (remotePPD?.length)     savePPD(remotePPD);
 
-      // Refresh active session with latest data from Supabase
       if (remoteUsers?.length && CU) {
         const fresh = remoteUsers.find(u => u.username === CU.username);
         if (fresh) { CU = fresh; localStorage.setItem('sars_session', JSON.stringify(CU)); }
