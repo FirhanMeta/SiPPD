@@ -791,6 +791,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     </div>
     <input type="date" class="fc" id="ppd-date" onchange="loadPPDDashboard()" style="flex:1;padding:8px 12px;font-size:13px;display:none">
     <input type="month" class="fc" id="ppd-month" onchange="loadPPDDashboard()" style="flex:1;padding:8px 12px;font-size:13px;display:none">
+    <span id="ppd-loading-dot" style="display:none;width:8px;height:8px;border-radius:50%;background:var(--amber);animation:pulse .8s infinite alternate;flex-shrink:0"></span>
+    <button class="btn btn-s btn-sm" id="ppd-btn-refresh" onclick="ppdRefresh()" style="display:none;flex-shrink:0" title="Refresh data">↻</button>
     <button class="btn btn-s btn-sm" id="ppd-btn-export" onclick="exportPPDJSON()" style="display:none">⬇</button>
     <button class="btn btn-p btn-sm" id="ppd-btn-print" onclick="printPPDReport()" style="display:none">🖨</button>
   </div>
@@ -1232,6 +1234,16 @@ let setupRowCounter = 0;
 // ══════════════════════════════════════════════════
 // PPD DASHBOARD
 // ══════════════════════════════════════════════════
+function ppdRefresh() {
+  if (ppdMode === 'overview') loadPPDOverview();
+  else loadPPDDashboard();
+}
+
+function setPPDLoading(on) {
+  const dot = document.getElementById('ppd-loading-dot');
+  if (dot) dot.style.display = on ? 'block' : 'none';
+}
+
 let ppdMode = 'overview'; // BUG FIX 5: Start on 'overview' to match initial panel state
 
 function openPPD() {
@@ -1263,6 +1275,7 @@ function ppdToggle(mode) {
   // Export/print buttons only on day/month tabs
   document.getElementById('ppd-btn-export').style.display = mode !== 'overview' ? 'inline-flex' : 'none';
   document.getElementById('ppd-btn-print').style.display  = mode !== 'overview' ? 'inline-flex' : 'none';
+  document.getElementById('ppd-btn-refresh').style.display = mode !== 'overview' ? 'inline-flex' : 'none';
 
   // Panel visibility
   document.getElementById('ppd-overview-panel').style.display = mode === 'overview' ? 'block' : 'none';
@@ -1341,11 +1354,11 @@ async function loadPPDOverview() {
     const timeout = setTimeout(() => controller.abort(), 10000);
     const [dayRes, monthRes] = await Promise.all([
       fetch(
-        `${cfg.url}/rest/v1/attendance?date=eq.${dateStr}&school_code=in.(${codes.join(',')})`,
+        `${cfg.url}/rest/v1/attendance?select=*&date=eq.${dateStr}&school_code=in.(${encodeURIComponent(codes.join(','))})`,
         { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key }, signal: controller.signal }
       ),
       fetch(
-        `${cfg.url}/rest/v1/attendance?date=gte.${startDate}&date=lte.${endDate}&school_code=in.(${codes.join(',')})&order=school_code`,
+        `${cfg.url}/rest/v1/attendance?select=*&date=gte.${startDate}&date=lte.${endDate}&school_code=in.(${encodeURIComponent(codes.join(','))})&order=school_code`,
         { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key }, signal: controller.signal }
       )
     ]);
@@ -1354,8 +1367,15 @@ async function loadPPDOverview() {
     if (!dayRes.ok || !monthRes.ok) {
       fetchFailed = true;
     } else {
-      dayData   = await dayRes.json();
-      monthData = await monthRes.json();
+      const parseRec = r => ({
+        ...r,
+        attendance_rate: parseFloat(r.attendance_rate) || 0,
+        total_enrolled: parseInt(r.total_enrolled) || 0,
+        total_present: parseInt(r.total_present) || 0,
+        total_absent: parseInt(r.total_absent) || 0,
+      });
+      dayData   = (await dayRes.json()).map(parseRec);
+      monthData = (await monthRes.json()).map(parseRec);
       setOvBanner('ok', '✅ <strong>Live data</strong> loaded from Supabase.');
     }
   } catch(e) {
@@ -1618,6 +1638,7 @@ function printPPDOverview() {
 }
 
 async function loadPPDDashboard() {
+  setPPDLoading(true);
   const ppd = CU.ppd;
   const cfg = getSupaConfig();
 
@@ -1632,6 +1653,7 @@ async function loadPPDDashboard() {
     const records = _buildPPDRecordsFromLocal(codes);
     window._ppdRecords = records;
     renderPPDCards(records, schools);
+    setPPDLoading(false);
     return;
   }
 
@@ -1640,16 +1662,22 @@ async function loadPPDDashboard() {
 
   if (ppdMode === 'day') {
     const date = document.getElementById('ppd-date').value;
-    if (!date) return;
+    if (!date) { setPPDLoading(false); return; }
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
       const res = await fetch(
-        `${cfg.url}/rest/v1/attendance?date=eq.${date}&school_code=in.(${codes.join(',')})&order=school_name`,
+        `${cfg.url}/rest/v1/attendance?select=*&date=eq.${date}&school_code=in.(${encodeURIComponent(codes.join(','))})&order=school_name`,
         { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key }, signal: controller.signal }
       );
       clearTimeout(timeout);
-      if (res.ok) records = await res.json();
+      if (res.ok) records = (await res.json()).map(r => ({
+        ...r,
+        attendance_rate: parseFloat(r.attendance_rate) || 0,
+        total_enrolled: parseInt(r.total_enrolled) || 0,
+        total_present: parseInt(r.total_present) || 0,
+        total_absent: parseInt(r.total_absent) || 0,
+      }));
       else { fetchFailed = true; console.warn('Supabase day fetch HTTP', res.status); }
     } catch(e) { fetchFailed = true; console.warn('Supabase day fetch error:', e.message); }
 
@@ -1661,7 +1689,7 @@ async function loadPPDDashboard() {
 
   } else {
     const month = document.getElementById('ppd-month').value;
-    if (!month) return;
+    if (!month) { setPPDLoading(false); return; }
     const [yr, mo] = month.split('-');
     const startDate = `${yr}-${mo}-01`;
     const endDate   = `${yr}-${mo}-${new Date(yr, parseInt(mo), 0).getDate()}`;
@@ -1670,11 +1698,17 @@ async function loadPPDDashboard() {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
       const res = await fetch(
-        `${cfg.url}/rest/v1/attendance?date=gte.${startDate}&date=lte.${endDate}&school_code=in.(${codes.join(',')})&order=school_code`,
+        `${cfg.url}/rest/v1/attendance?select=*&date=gte.${startDate}&date=lte.${endDate}&school_code=in.(${encodeURIComponent(codes.join(','))})&order=school_code`,
         { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key }, signal: controller.signal }
       );
       clearTimeout(timeout);
-      if (res.ok) raw = await res.json();
+      if (res.ok) raw = (await res.json()).map(r => ({
+        ...r,
+        attendance_rate: parseFloat(r.attendance_rate) || 0,
+        total_enrolled: parseInt(r.total_enrolled) || 0,
+        total_present: parseInt(r.total_present) || 0,
+        total_absent: parseInt(r.total_absent) || 0,
+      }));
       else { fetchFailed = true; console.warn('Supabase month fetch HTTP', res.status); }
     } catch(e) { fetchFailed = true; console.warn('Supabase month fetch error:', e.message); }
 
@@ -1688,9 +1722,8 @@ async function loadPPDDashboard() {
 
   window._ppdRecords = records;
   renderPPDCards(records, schools);
+  setPPDLoading(false);
 }
-
-// Aggregate raw attendance rows into per-school monthly summaries
 function _aggregateBySchool(raw) {
   const map = {};
   raw.forEach(r => {
@@ -1739,6 +1772,14 @@ function renderPPDCards(records, schools) {
   const submittedCodes = new Set(records.map(r => r.school_code));
   const missing = schools.filter(s => !submittedCodes.has(s.code));
 
+  const container = document.getElementById('ppd-cards');
+  const emptyEl   = document.getElementById('ppd-empty');
+
+  // Always ensure container is visible when we have something to show
+  if (records.length || missing.length) {
+    container.style.display = 'flex';
+  }
+
   if (records.length) {
     let rateDisplay, totP, totE;
     if (ppdMode === 'month') {
@@ -1763,9 +1804,6 @@ function renderPPDCards(records, schools) {
     document.getElementById('ppd-intervention').textContent = '—';
   }
   document.getElementById('ppd-submitted').textContent = records.length;
-
-  const container = document.getElementById('ppd-cards');
-  const emptyEl   = document.getElementById('ppd-empty');
 
   if (!records.length && !missing.length) {
     emptyEl.style.display = 'block';
@@ -2732,6 +2770,7 @@ async function saveAttendance(){
     id:genId(),
     school_code:code,
     school_name:CU._school.name,
+    school_type:CU._school.type||'',
     date,
     submitted_by:CU.username,
     submitted_at:new Date().toISOString(),
@@ -3505,6 +3544,7 @@ async function pushToSupabase(record){
     const payload={
       school_code:record.school_code,
       school_name:record.school_name,
+      school_type:record.school_type||'',
       date:record.date,
       submitted_by:record.submitted_by,
       submitted_at:record.submitted_at,
