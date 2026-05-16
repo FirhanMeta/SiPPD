@@ -843,7 +843,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <div class="ssub">across submitted schools</div>
         </div>
         <div class="scard">
-          <div class="slabel">Total Hadir</div>
+          <div class="slabel">Avg Hadir/Hari</div>
           <div class="sval" id="ov-month-present">—</div>
           <div class="ssub">of <span id="ov-month-enrolled">—</span> enrolled</div>
         </div>
@@ -1463,11 +1463,14 @@ function renderOverviewFromRemote(schools, codes, dateStr, yr, mo, dayData, mont
 // ── Shared renderer for monthly school performance list ──
 function _renderOvSchoolList(schools, map, yr, mo, dateStr, isLocal) {
   const schoolRecords = Object.values(map).map(s => ({
-    ...s, attendance_rate: s.days > 0 ? parseFloat((s.rate_sum / s.days).toFixed(2)) : 0
+    ...s,
+    attendance_rate: s.days > 0 ? parseFloat((s.rate_sum / s.days).toFixed(2)) : 0,
+    avg_daily_present: s.days > 0 ? Math.round(s.total_present / s.days) : 0,
   })).sort((a, b) => b.attendance_rate - a.attendance_rate);
 
-  const totP = schoolRecords.reduce((a,r) => a + r.total_present, 0);
+  // Use enrolled (stable per-school figure) and avg daily present for monthly summary
   const totE = schoolRecords.reduce((a,r) => a + r.total_enrolled, 0);
+  const totP = schoolRecords.reduce((a,r) => a + r.avg_daily_present, 0);
   const avgRate = schoolRecords.length > 0
     ? (schoolRecords.reduce((a,r) => a + r.attendance_rate, 0) / schoolRecords.length).toFixed(1) : null;
   const maxDays = Math.max(0, ...Object.values(map).map(s => s.days));
@@ -1511,7 +1514,7 @@ function _renderOvSchoolList(schools, map, yr, mo, dateStr, isLocal) {
           <div style="height:100%;width:${barW}%;background:${rateColor(r.attendance_rate)};border-radius:4px"></div>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
-          <span>👩‍🎓 ${r.total_present} hadir / ${r.total_enrolled} enrol</span>
+          <span>👩‍🎓 ~${r.avg_daily_present} hadir/hari · ${r.total_enrolled} enrol</span>
           <span>📅 ${r.days} hari · 🕐 ${fmtTime(r.submitted_at)}</span>
         </div>
       </div>
@@ -1575,7 +1578,7 @@ function printPPDOverview() {
     </div>
     <div style="border:1.5px solid #dde;border-radius:8px;padding:10px;text-align:center">
       <div style="font-size:22px;font-weight:700;color:${green}">${d.totP || '—'}</div>
-      <div style="font-size:10px;color:#888;margin-top:2px">Total Hadir</div>
+      <div style="font-size:10px;color:#888;margin-top:2px">Avg Hadir/Hari</div>
     </div>
     <div style="border:1.5px solid #dde;border-radius:8px;padding:10px;text-align:center">
       <div style="font-size:22px;font-weight:700;color:${navy}">${d.totE || '—'}</div>
@@ -1595,7 +1598,7 @@ function printPPDOverview() {
       <tr>
         <th style="background:${navy};color:#fff;padding:7px 10px;text-align:left">#</th>
         <th style="background:${navy};color:#fff;padding:7px 10px;text-align:left">Sekolah</th>
-        <th style="background:${navy};color:#fff;padding:7px 10px;text-align:center">Hadir</th>
+        <th style="background:${navy};color:#fff;padding:7px 10px;text-align:center">Avg Hadir/Hari</th>
         <th style="background:${navy};color:#fff;padding:7px 10px;text-align:center">Enrol</th>
         <th style="background:${navy};color:#fff;padding:7px 10px;text-align:center">Avg Rate</th>
         <th style="background:${navy};color:#fff;padding:7px 10px;text-align:center">Hari</th>
@@ -1610,7 +1613,7 @@ function printPPDOverview() {
           <div style="font-weight:600">${esc(r.school_name)}</div>
           <div style="font-size:10px;color:#888;font-family:monospace">${r.school_code}</div>
         </td>
-        <td style="padding:7px 10px;text-align:center;color:${green};font-weight:700">${r.total_present}</td>
+        <td style="padding:7px 10px;text-align:center;color:${green};font-weight:700">~${r.avg_daily_present || Math.round(r.total_present/(r.days||1))}</td>
         <td style="padding:7px 10px;text-align:center">${r.total_enrolled}</td>
         <td style="padding:7px 10px;text-align:center;font-weight:700;color:${rateColor(r.attendance_rate)}">${r.attendance_rate.toFixed(1)}%</td>
         <td style="padding:7px 10px;text-align:center;color:#666">${r.days}</td>
