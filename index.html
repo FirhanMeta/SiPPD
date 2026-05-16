@@ -2360,6 +2360,7 @@ async function doLogin() {
   const username = document.getElementById('l-user').value.trim();
   const password = document.getElementById('l-pass').value;
   const errEl = document.getElementById('l-err');
+  const btn = document.querySelector('.l-btn');
   errEl.style.display = 'none';
 
   if (!username || !password) {
@@ -2367,23 +2368,72 @@ async function doLogin() {
     errEl.style.display = 'block'; return;
   }
 
+  // Show loading state
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+
   const cfg = getSupaConfig();
   let user = null;
+  let supaReachable = false;
 
+  // ── Try Supabase with a 7-second timeout ──
   if (cfg.url && cfg.key) {
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 7000);
       const res = await fetch(
         `${cfg.url}/rest/v1/sars_users?username=eq.${encodeURIComponent(username)}&limit=1`,
-        { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key } }
+        { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key }, signal: controller.signal }
       );
-      const data = await res.json();
-      user = data[0] || null;
-    } catch(e) { /* fall through to localStorage */ }
+      clearTimeout(timeout);
+      if (res.ok) {
+        const data = await res.json();
+        // Sync all users to localStorage so future logins work offline
+        if (data.length > 0) {
+          supaReachable = true;
+          user = data[0];
+          // Also refresh full user list in background
+          fetch(`${cfg.url}/rest/v1/sars_users`, {
+            headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key }
+          }).then(r => r.ok ? r.json() : null)
+            .then(all => { if (all?.length) saveUsers(all); })
+            .catch(() => {});
+        } else if (res.ok) {
+          // User not found in Supabase — still check localStorage
+          supaReachable = true;
+        }
+      }
+    } catch(e) {
+      console.warn('Supabase login fetch failed:', e.message);
+      // Will fall through to localStorage
+    }
   }
 
-  if (!user) user = getUsers().find(u => u.username === username) || null;
+  // ── Always also check localStorage (works offline / fresh browser) ──
+  if (!user) {
+    user = getUsers().find(u => u.username === username) || null;
+  }
 
-  if (!user || user.password !== password) {
+  // Restore button
+  btn.disabled = false;
+  btn.textContent = 'Sign In →';
+
+  if (!user) {
+    // Distinguish between "wrong credentials" and "no data at all"
+    const hasAnyUsers = getUsers().length > 0;
+    const supaConfigured = !!(cfg.url && cfg.key);
+    if (!hasAnyUsers && supaConfigured && !supaReachable) {
+      errEl.innerHTML = '⚠ Cannot reach server. Check your internet connection and try again, or ask admin to verify the Supabase URL.';
+    } else {
+      errEl.textContent = '✕ Incorrect username or password.';
+    }
+    errEl.style.display = 'block';
+    document.getElementById('l-pass').classList.add('err');
+    setTimeout(() => document.getElementById('l-pass').classList.remove('err'), 1200);
+    return;
+  }
+
+  if (user.password !== password) {
     errEl.textContent = '✕ Incorrect username or password.';
     errEl.style.display = 'block';
     document.getElementById('l-pass').classList.add('err');
@@ -3642,33 +3692,46 @@ function populatePPDSelect(elId, selected = '') {
 document.addEventListener('DOMContentLoaded', async () => {
   initDefaults();
 
-  const saved = localStorage.getItem('sars_session');
-  if (saved) {
-    try { CU = JSON.parse(saved); showLanding(); }
-    catch { localStorage.removeItem('sars_session'); showScreen('screen-login'); }
-  } else {
-    showScreen('screen-login');
-  }
-
   const cfg = getSupaConfig();
+
+  // ── Pre-load users from Supabase into localStorage (with 8s timeout) ──
+  // This ensures fresh browsers / private mode can log in even if Supabase
+  // is slow, and populates the local cache for offline fallback.
   if (cfg.url && cfg.key) {
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
       const [remoteUsers, remoteSchools, remoteJPN, remotePPD] = await Promise.all([
-        getUsersFromSupabase(),
-        getSchoolsFromSupabase(),
-        getJPNFromSupabase(),
-        getPPDFromSupabase()
+        fetch(`${cfg.url}/rest/v1/sars_users`,   { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key }, signal: controller.signal }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(`${cfg.url}/rest/v1/sars_schools`,  { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key }, signal: controller.signal }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(`${cfg.url}/rest/v1/sars_jpn?order=name`, { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key }, signal: controller.signal }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(`${cfg.url}/rest/v1/sars_ppd?order=name`, { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key }, signal: controller.signal }).then(r => r.ok ? r.json() : null).catch(() => null),
       ]);
+      clearTimeout(timeout);
       if (remoteUsers?.length)   saveUsers(remoteUsers);
       if (remoteSchools?.length) saveSchools(remoteSchools);
       if (remoteJPN?.length)     saveJPN(remoteJPN);
       if (remotePPD?.length)     savePPD(remotePPD);
+    } catch(e) {
+      console.warn('Background sync failed (will use local cache):', e.message);
+    }
+  }
 
-      if (remoteUsers?.length && CU) {
-        const fresh = remoteUsers.find(u => u.username === CU.username);
-        if (fresh) { CU = fresh; localStorage.setItem('sars_session', JSON.stringify(CU)); }
-      }
-    } catch(e) { console.warn('Background sync failed:', e); }
+  // ── Restore session or show login ──
+  const saved = localStorage.getItem('sars_session');
+  if (saved) {
+    try {
+      CU = JSON.parse(saved);
+      // Refresh CU from newly-synced user list if available
+      const fresh = getUsers().find(u => u.username === CU.username);
+      if (fresh) { CU = fresh; localStorage.setItem('sars_session', JSON.stringify(CU)); }
+      showLanding();
+    } catch {
+      localStorage.removeItem('sars_session');
+      showScreen('screen-login');
+    }
+  } else {
+    showScreen('screen-login');
   }
 });
 </script>
