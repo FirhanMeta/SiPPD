@@ -742,61 +742,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="card ai">
       <div class="card-hd"><div class="c-icon" style="background:#FFF4E0">📋</div><h3>Required Table Schema</h3></div>
       <div class="card-body">
-        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Create these tables in your Supabase SQL editor:</p>
-        <pre style="background:var(--navy);color:#a8d8ea;padding:16px;border-radius:8px;font-size:12px;font-family:var(--mono);overflow-x:auto;line-height:1.6">-- 1. Attendance records
-create table attendance (
-  id             uuid primary key default gen_random_uuid(),
-  school_code    text not null,
-  school_name    text not null,
-  date           date not null,
-  submitted_by   text,
-  submitted_at   timestamptz default now(),
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Create this table in your Supabase SQL editor:</p>
+        <pre style="background:var(--navy);color:#a8d8ea;padding:16px;border-radius:8px;font-size:12px;font-family:var(--mono);overflow-x:auto;line-height:1.6">create table attendance (
+  id          uuid primary key default gen_random_uuid(),
+  school_code text not null,
+  school_name text not null,
+  date        date not null,
+  submitted_by text,
+  submitted_at timestamptz default now(),
   total_enrolled int,
   total_present  int,
   total_absent   int,
   attendance_rate numeric(5,2),
-  classrooms     jsonb,
+  classrooms  jsonb,
   unique(school_code, date)
-);
-
--- 2. Schools (code is primary key)
-create table sars_schools (
-  code      text primary key,
-  name      text not null,
-  type      text,           -- SK / SMK / SJKC / SJKT / SABK / SMKA
-  jpn_code  text,
-  ppd_code  text
-);
-
--- 3. Users
-create table sars_users (
-  username    text primary key,
-  password    text not null,
-  role        text not null, -- teacher / ppd / admin
-  display     text,
-  school      text,          -- for teachers
-  ppd         text,          -- for ppd officers
-  created_at  timestamptz default now()
-);
-
--- 4. PPD (Pejabat Pendidikan Daerah)
-create table sars_ppd (
-  code      text primary key,
-  name      text not null,
-  jpn_code  text
-);
-
--- 5. JPN (Jabatan Pendidikan Negeri)
-create table sars_jpn (
-  code  text primary key,
-  name  text not null
-);
-
--- 6. Class setup per school
-create table class_setup (
-  school_code text primary key,
-  classes     jsonb,
-  updated_at  timestamptz default now()
 );</pre>
       </div>
     </div>
@@ -840,6 +799,9 @@ create table class_setup (
 
     <!-- PPD OVERVIEW PANEL -->
     <div id="ppd-overview-panel" style="display:block">
+
+      <!-- Connection status banner -->
+      <div id="ov-conn-banner" style="display:none;margin-bottom:10px"></div>
 
       <div style="background:var(--navy);border-radius:var(--r);padding:18px 20px;margin-bottom:12px">
         <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">PPD District</div>
@@ -994,61 +956,6 @@ create table class_setup (
         </table>
       </div>
       <div id="ppd-modal-footer" style="padding:10px 16px;font-size:11px;color:var(--muted);border-top:1px solid var(--bdr)"></div>
-    </div>
-  </div>
-</div>
-
-<!-- EDIT SCHOOL MODAL -->
-<div class="modal-ov" id="modal-edit-school">
-  <div class="modal" style="max-width:460px">
-    <div class="modal-hd">
-      <h3>✏️ Edit School</h3>
-      <button class="modal-x" onclick="closeModal('modal-edit-school')"><svg width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="es-orig">
-      <div class="frow">
-        <div class="fg">
-          <label class="flabel">School Code <span>*</span></label>
-          <input type="text" class="fc" id="es-code" autocapitalize="characters" placeholder="e.g. SKA016">
-        </div>
-        <div class="fg">
-          <label class="flabel">School Type <span>*</span></label>
-          <select class="fc" id="es-type">
-            <option value="SK">SK</option>
-            <option value="SMK">SMK</option>
-            <option value="SJKC">SJKC</option>
-            <option value="SJKT">SJKT</option>
-            <option value="SABK">SABK</option>
-            <option value="SMKA">SMKA</option>
-          </select>
-        </div>
-      </div>
-      <div class="fg">
-        <label class="flabel">School Name <span>*</span></label>
-        <input type="text" class="fc" id="es-name" placeholder="e.g. SK Penampang">
-      </div>
-      <div class="frow">
-        <div class="fg" style="position:relative">
-          <label class="flabel">JPN <span>*</span></label>
-          <input type="text" id="es-jpn-search" class="fc" placeholder="Search JPN…"
-            onfocus="showESJPNOptions()" oninput="filterESJPNOptions()" onblur="setTimeout(()=>hideDropdown('es-jpn-opts'),150)">
-          <input type="hidden" id="es-jpn">
-          <div id="es-jpn-opts" style="position:absolute;z-index:999;background:#fff;border:1px solid #ddd;border-radius:8px;width:100%;max-height:180px;overflow-y:auto;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1);top:68px"></div>
-        </div>
-        <div class="fg" style="position:relative">
-          <label class="flabel">PPD <span>*</span></label>
-          <input type="text" id="es-ppd-search" class="fc" placeholder="Select JPN first…"
-            onfocus="showESPPDOptions()" oninput="filterESPPDOptions()" onblur="setTimeout(()=>hideDropdown('es-ppd-opts'),150)" disabled>
-          <input type="hidden" id="es-ppd">
-          <div id="es-ppd-opts" style="position:absolute;z-index:999;background:#fff;border:1px solid #ddd;border-radius:8px;width:100%;max-height:180px;overflow-y:auto;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1);top:68px"></div>
-        </div>
-      </div>
-      <div id="es-err" class="alert al-err" style="display:none"></div>
-    </div>
-    <div class="modal-ft">
-      <button class="btn btn-s" onclick="closeModal('modal-edit-school')">Cancel</button>
-      <button class="btn btn-p" onclick="saveEditSchool()">💾 Save Changes</button>
     </div>
   </div>
 </div>
@@ -1373,10 +1280,29 @@ function ppdToggle(mode) {
   else loadPPDDashboard();
 }
 
+// Helper: build attendance records from localStorage for a set of school codes
+function getLocalRecordsForCodes(codes, dateStr) {
+  return getAllRecords().filter(r => codes.includes(r.school_code) && r.date === dateStr);
+}
+function getLocalRecordsForCodesAndMonth(codes, yr, mo) {
+  const prefix = `${yr}-${mo.toString().padStart(2,'0')}`;
+  return getAllRecords().filter(r => codes.includes(r.school_code) && r.date.startsWith(prefix));
+}
+
+// Show or hide the connection banner in the PPD overview
+function setOvBanner(type, msg) {
+  const el = document.getElementById('ov-conn-banner');
+  if (!el) return;
+  if (!type) { el.style.display = 'none'; return; }
+  const cls = type === 'warn' ? 'al-warn' : type === 'ok' ? 'al-ok' : 'al-err';
+  el.className = 'alert ' + cls;
+  el.innerHTML = msg;
+  el.style.display = 'flex';
+}
+
 async function loadPPDOverview() {
   const ppd = CU.ppd;
   const cfg = getSupaConfig();
-  if (!cfg.url || !cfg.key) { showToast('⚠ Supabase not configured'); return; }
 
   const schools = getSchools().filter(s => s.ppd_code === ppd);
   const codes   = schools.map(s => s.code);
@@ -1384,9 +1310,11 @@ async function loadPPDOverview() {
   document.getElementById('ov-ppd-name').textContent = CU.display || ppd;
   document.getElementById('ov-ppd-sub').textContent  = ppd + ' · ' + schools.length + ' schools registered';
   document.getElementById('ov-day-total').textContent = schools.length;
+  setOvBanner(null);
 
   if (!codes.length) {
     document.getElementById('ov-empty').style.display = 'block';
+    setOvBanner('warn', '⚠️ No schools are assigned to this PPD yet. Ask admin to add schools.');
     return;
   }
 
@@ -1394,132 +1322,195 @@ async function loadPPDOverview() {
   const yr        = dateStr.slice(0, 4);
   const mo        = dateStr.slice(5, 7);
   const startDate = `${yr}-${mo}-01`;
-  const endDate   = `${yr}-${mo}-${new Date(yr, mo, 0).getDate()}`;
+  const endDate   = `${yr}-${mo}-${new Date(yr, parseInt(mo), 0).getDate()}`;
 
   document.getElementById('ov-day-date').textContent   = fmtDate(dateStr);
   document.getElementById('ov-month-label').textContent = yr + '-' + mo;
 
+  // ── No Supabase config → fall back to localStorage immediately ──
+  if (!cfg.url || !cfg.key) {
+    setOvBanner('warn', '⚠️ <strong>Supabase not configured.</strong> Showing data from local cache only. Ask admin to configure Supabase in the Admin → Supabase tab.');
+    renderOverviewFromLocal(schools, codes, dateStr, yr, mo);
+    return;
+  }
+
+  let dayData = null, monthData = null, fetchFailed = false;
+
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
     const [dayRes, monthRes] = await Promise.all([
       fetch(
         `${cfg.url}/rest/v1/attendance?date=eq.${dateStr}&school_code=in.(${codes.join(',')})`,
-        { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key } }
+        { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key }, signal: controller.signal }
       ),
       fetch(
         `${cfg.url}/rest/v1/attendance?date=gte.${startDate}&date=lte.${endDate}&school_code=in.(${codes.join(',')})&order=school_code`,
-        { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key } }
+        { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key }, signal: controller.signal }
       )
     ]);
+    clearTimeout(timeout);
 
-    // ── Today snapshot ──
-    if (dayRes.ok) {
-      const dayData = await dayRes.json();
-      const dayE    = dayData.reduce((a, r) => a + r.total_enrolled, 0);
-      const dayP    = dayData.reduce((a, r) => a + r.total_present,  0);
-      const dayRate = dayE > 0 ? (dayP / dayE * 100).toFixed(1) + '%' : '—';
-      document.getElementById('ov-day-rate').textContent      = dayData.length ? dayRate : '—';
-      document.getElementById('ov-day-present').textContent   = dayData.length ? dayP    : '—';
-      document.getElementById('ov-day-enrolled').textContent  = dayData.length ? dayE    : '—';
-      document.getElementById('ov-day-submitted').textContent = dayData.length;
-      document.getElementById('ov-day-missing').textContent   = schools.length - dayData.length;
+    if (!dayRes.ok || !monthRes.ok) {
+      fetchFailed = true;
+    } else {
+      dayData   = await dayRes.json();
+      monthData = await monthRes.json();
+      setOvBanner('ok', '✅ <strong>Live data</strong> loaded from Supabase.');
     }
+  } catch(e) {
+    fetchFailed = true;
+    console.warn('Supabase fetch error:', e.message);
+  }
 
-    // ── Monthly performance ──
-    if (monthRes.ok) {
-      const raw = await monthRes.json();
-      const map = {};
-      raw.forEach(r => {
-        if (!map[r.school_code]) {
-          map[r.school_code] = {
-            school_code: r.school_code, school_name: r.school_name,
-            school_type: r.school_type || '', total_enrolled: r.total_enrolled,
-            total_present: 0, total_absent: 0,
-            days: 0, rate_sum: 0,
-            submitted_at: r.submitted_at, submitted_by: r.submitted_by
-          };
-        }
-        const m = map[r.school_code];
-        m.total_enrolled  = r.total_enrolled;
-        m.total_present  += r.total_present;
-        m.total_absent   += r.total_absent;
-        m.days           += 1;
-        m.rate_sum       += parseFloat(r.attendance_rate);
-        if (r.submitted_at > m.submitted_at) {
-          m.submitted_at = r.submitted_at;
-          m.submitted_by = r.submitted_by;
-        }
-      });
+  // ── Fallback: use localStorage when Supabase is unreachable ──
+  if (fetchFailed) {
+    setOvBanner('warn', `⚠️ <strong>Cannot reach Supabase</strong> (network error). Showing data from <strong>local cache</strong> only. Check your internet connection or Supabase URL in Admin → Supabase.`);
+    renderOverviewFromLocal(schools, codes, dateStr, yr, mo);
+    return;
+  }
 
-      const schoolRecords = Object.values(map).map(s => ({
-        ...s,
-        attendance_rate: s.days > 0 ? parseFloat((s.rate_sum / s.days).toFixed(2)) : 0
-      })).sort((a, b) => b.attendance_rate - a.attendance_rate);
+  renderOverviewFromRemote(schools, codes, dateStr, yr, mo, dayData, monthData);
+}
 
-      const totP        = schoolRecords.reduce((a, r) => a + r.total_present,  0);
-      const totE        = schoolRecords.reduce((a, r) => a + r.total_enrolled,  0);
-      const avgRate     = schoolRecords.length > 0
-        ? (schoolRecords.reduce((a, r) => a + r.attendance_rate, 0) / schoolRecords.length).toFixed(1) : null;
-      const maxDays     = raw.length ? Math.max(...Object.values(map).map(s => s.days)) : 0;
-      const intervention = schoolRecords.filter(r => r.attendance_rate < 85).length;
+// ── Renders overview stats + school list from localStorage records ──
+function renderOverviewFromLocal(schools, codes, dateStr, yr, mo) {
+  const dayRecs   = getLocalRecordsForCodes(codes, dateStr);
+  const monthRecs = getLocalRecordsForCodesAndMonth(codes, yr, mo);
 
-      document.getElementById('ov-month-rate').textContent         = avgRate ? avgRate + '%' : '—';
-      document.getElementById('ov-month-present').textContent      = totP || '—';
-      document.getElementById('ov-month-enrolled').textContent     = totE || '—';
-      document.getElementById('ov-month-days').textContent         = maxDays || '—';
-      document.getElementById('ov-month-intervention').textContent = schoolRecords.length ? intervention : '—';
+  // Today snapshot
+  const dayE = dayRecs.reduce((a,r) => a + r.total_enrolled, 0);
+  const dayP = dayRecs.reduce((a,r) => a + r.total_present, 0);
+  document.getElementById('ov-day-rate').textContent      = dayRecs.length && dayE > 0 ? (dayP/dayE*100).toFixed(1)+'%' : '—';
+  document.getElementById('ov-day-present').textContent   = dayRecs.length ? dayP : '—';
+  document.getElementById('ov-day-enrolled').textContent  = dayRecs.length ? dayE : '—';
+  document.getElementById('ov-day-submitted').textContent = dayRecs.length;
+  document.getElementById('ov-day-missing').textContent   = schools.length - dayRecs.length;
 
-      const missingSchools = schools.filter(s => !map[s.code]);
-      const rateColor = r => r >= 95 ? '#d4af37' : r >= 90 ? 'var(--blue)' : r >= 85 ? '#718096' : 'var(--red)';
+  // Monthly — aggregate per school
+  const map = {};
+  monthRecs.forEach(r => {
+    if (!map[r.school_code]) map[r.school_code] = {
+      school_code: r.school_code, school_name: r.school_name,
+      school_type: r.school_type || '', total_enrolled: r.total_enrolled,
+      total_present: 0, total_absent: 0, days: 0, rate_sum: 0,
+      submitted_at: r.submitted_at, submitted_by: r.submitted_by
+    };
+    const m = map[r.school_code];
+    m.total_enrolled = r.total_enrolled;
+    m.total_present += r.total_present;
+    m.total_absent  += r.total_absent;
+    m.days          += 1;
+    m.rate_sum      += parseFloat(r.attendance_rate);
+    if (r.submitted_at > m.submitted_at) { m.submitted_at = r.submitted_at; m.submitted_by = r.submitted_by; }
+  });
+  _renderOvSchoolList(schools, map, yr, mo, dateStr, true);
+}
 
-      const listEl = document.getElementById('ov-school-list');
-      if (!schoolRecords.length && !missingSchools.length) {
-        document.getElementById('ov-empty').style.display = 'block';
-        listEl.innerHTML = '';
-        return;
-      }
+// ── Renders overview stats + school list from Supabase response data ──
+function renderOverviewFromRemote(schools, codes, dateStr, yr, mo, dayData, monthData) {
+  // Today snapshot
+  if (dayData) {
+    const dayE = dayData.reduce((a,r) => a + r.total_enrolled, 0);
+    const dayP = dayData.reduce((a,r) => a + r.total_present, 0);
+    document.getElementById('ov-day-rate').textContent      = dayData.length && dayE > 0 ? (dayP/dayE*100).toFixed(1)+'%' : '—';
+    document.getElementById('ov-day-present').textContent   = dayData.length ? dayP : '—';
+    document.getElementById('ov-day-enrolled').textContent  = dayData.length ? dayE : '—';
+    document.getElementById('ov-day-submitted').textContent = dayData.length;
+    document.getElementById('ov-day-missing').textContent   = schools.length - dayData.length;
+  }
 
-      listEl.innerHTML = schoolRecords.map((r, i) => {
-        const kpi  = kpiLevel(r.attendance_rate);
-        const barW = Math.min(r.attendance_rate, 100).toFixed(1);
-        return `
-        <div class="card ai" style="margin-bottom:0">
-          <div class="card-body" style="padding:12px 16px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-              <div style="font-size:16px;font-weight:700;color:var(--muted);font-family:var(--mono);width:24px;flex-shrink:0">${i+1}</div>
-              <div style="flex:1;min-width:0">
-                <div style="font-size:13px;font-weight:700;color:var(--navy)">${esc(r.school_name)}</div>
-                <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${r.school_code}${r.school_type ? ' · '+r.school_type : ''}</div>
-              </div>
-              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
-                <span style="font-size:18px;font-weight:700;font-family:var(--mono);color:${rateColor(r.attendance_rate)}">${r.attendance_rate.toFixed(1)}%</span>
-                <span style="padding:2px 7px;border-radius:12px;font-size:10px;font-weight:700;background:${kpi.bg};color:${kpi.color};border:1px solid ${kpi.border}">${kpi.label}</span>
-              </div>
-            </div>
-            <div style="background:var(--lite);border-radius:4px;height:6px;margin-bottom:6px;overflow:hidden">
-              <div style="height:100%;width:${barW}%;background:${rateColor(r.attendance_rate)};border-radius:4px"></div>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
-              <span>👩‍🎓 ${r.total_present} hadir / ${r.total_enrolled} enrol</span>
-              <span>📅 ${r.days} hari · 🕐 ${fmtTime(r.submitted_at)}</span>
-            </div>
+  // Monthly
+  const map = {};
+  (monthData || []).forEach(r => {
+    if (!map[r.school_code]) map[r.school_code] = {
+      school_code: r.school_code, school_name: r.school_name,
+      school_type: r.school_type || '', total_enrolled: r.total_enrolled,
+      total_present: 0, total_absent: 0, days: 0, rate_sum: 0,
+      submitted_at: r.submitted_at, submitted_by: r.submitted_by
+    };
+    const m = map[r.school_code];
+    m.total_enrolled = r.total_enrolled;
+    m.total_present += r.total_present;
+    m.total_absent  += r.total_absent;
+    m.days          += 1;
+    m.rate_sum      += parseFloat(r.attendance_rate);
+    if (r.submitted_at > m.submitted_at) { m.submitted_at = r.submitted_at; m.submitted_by = r.submitted_by; }
+  });
+  _renderOvSchoolList(schools, map, yr, mo, dateStr, false);
+}
+
+// ── Shared renderer for monthly school performance list ──
+function _renderOvSchoolList(schools, map, yr, mo, dateStr, isLocal) {
+  const schoolRecords = Object.values(map).map(s => ({
+    ...s, attendance_rate: s.days > 0 ? parseFloat((s.rate_sum / s.days).toFixed(2)) : 0
+  })).sort((a, b) => b.attendance_rate - a.attendance_rate);
+
+  const totP = schoolRecords.reduce((a,r) => a + r.total_present, 0);
+  const totE = schoolRecords.reduce((a,r) => a + r.total_enrolled, 0);
+  const avgRate = schoolRecords.length > 0
+    ? (schoolRecords.reduce((a,r) => a + r.attendance_rate, 0) / schoolRecords.length).toFixed(1) : null;
+  const maxDays = Math.max(0, ...Object.values(map).map(s => s.days));
+  const intervention = schoolRecords.filter(r => r.attendance_rate < 85).length;
+
+  document.getElementById('ov-month-rate').textContent         = avgRate ? avgRate + '%' : '—';
+  document.getElementById('ov-month-present').textContent      = totP || '—';
+  document.getElementById('ov-month-enrolled').textContent     = totE || '—';
+  document.getElementById('ov-month-days').textContent         = maxDays || '—';
+  document.getElementById('ov-month-intervention').textContent = schoolRecords.length ? intervention : '—';
+
+  const missingSchools = schools.filter(s => !map[s.code]);
+  const rateColor = r => r >= 95 ? '#d4af37' : r >= 90 ? 'var(--blue)' : r >= 85 ? '#718096' : 'var(--red)';
+  const listEl = document.getElementById('ov-school-list');
+
+  if (!schoolRecords.length && !missingSchools.length) {
+    document.getElementById('ov-empty').style.display = 'block';
+    listEl.innerHTML = '';
+    return;
+  }
+  document.getElementById('ov-empty').style.display = 'none';
+
+  listEl.innerHTML = schoolRecords.map((r, i) => {
+    const kpi  = kpiLevel(r.attendance_rate);
+    const barW = Math.min(r.attendance_rate, 100).toFixed(1);
+    return `
+    <div class="card ai" style="margin-bottom:0">
+      <div class="card-body" style="padding:12px 16px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="font-size:16px;font-weight:700;color:var(--muted);font-family:var(--mono);width:24px;flex-shrink:0">${i+1}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700;color:var(--navy)">${esc(r.school_name)}</div>
+            <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${r.school_code}${r.school_type ? ' · '+r.school_type : ''}${isLocal ? ' · 💾 local' : ''}</div>
           </div>
-        </div>`;
-      }).join('') +
-      missingSchools.map(s => `
-        <div class="card ai" style="opacity:.5;margin-bottom:0">
-          <div class="card-body" style="padding:12px 16px;display:flex;align-items:center;gap:10px">
-            <div style="font-size:20px">📭</div>
-            <div style="flex:1">
-              <div style="font-size:13px;font-weight:700;color:var(--navy)">${esc(s.name)}</div>
-              <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${s.code}</div>
-            </div>
-            <span style="padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:#f0f0f0;color:var(--muted)">Tiada Data</span>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+            <span style="font-size:18px;font-weight:700;font-family:var(--mono);color:${rateColor(r.attendance_rate)}">${r.attendance_rate.toFixed(1)}%</span>
+            <span style="padding:2px 7px;border-radius:12px;font-size:10px;font-weight:700;background:${kpi.bg};color:${kpi.color};border:1px solid ${kpi.border}">${kpi.label}</span>
           </div>
-        </div>`).join('');
+        </div>
+        <div style="background:var(--lite);border-radius:4px;height:6px;margin-bottom:6px;overflow:hidden">
+          <div style="height:100%;width:${barW}%;background:${rateColor(r.attendance_rate)};border-radius:4px"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
+          <span>👩‍🎓 ${r.total_present} hadir / ${r.total_enrolled} enrol</span>
+          <span>📅 ${r.days} hari · 🕐 ${fmtTime(r.submitted_at)}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('') +
+  missingSchools.map(s => `
+    <div class="card ai" style="opacity:.5;margin-bottom:0">
+      <div class="card-body" style="padding:12px 16px;display:flex;align-items:center;gap:10px">
+        <div style="font-size:20px">📭</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--navy)">${esc(s.name)}</div>
+          <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${s.code}</div>
+        </div>
+        <span style="padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:#f0f0f0;color:var(--muted)">Tiada Data</span>
+      </div>
+    </div>`).join('');
 
-      window._ovData = { schoolRecords, missingSchools, totP, totE, avgRate, maxDays, intervention, dateStr, monthLabel: yr+'-'+mo, ppd, schools };
-    }
-  } catch(e) { showToast('⚠ Error: ' + e.message); }
+  const ppd = CU.ppd;
+  window._ovData = { schoolRecords, missingSchools, totP, totE, avgRate, maxDays, intervention, dateStr, monthLabel: yr+'-'+mo, ppd, schools };
 }
 
 function printPPDOverview() {
@@ -1629,7 +1620,6 @@ function printPPDOverview() {
 async function loadPPDDashboard() {
   const ppd = CU.ppd;
   const cfg = getSupaConfig();
-  if (!cfg.url || !cfg.key) { showToast('⚠ Supabase not configured'); return; }
 
   const schools = getSchools().filter(s => s.ppd_code === ppd);
   document.getElementById('ppd-total-schools').textContent = schools.length;
@@ -1637,74 +1627,105 @@ async function loadPPDDashboard() {
   const codes = schools.map(s => s.code);
   if (!codes.length) { renderPPDCards([], schools); return; }
 
+  // No Supabase → use localStorage
+  if (!cfg.url || !cfg.key) {
+    const records = _buildPPDRecordsFromLocal(codes);
+    window._ppdRecords = records;
+    renderPPDCards(records, schools);
+    return;
+  }
+
   let records = [];
+  let fetchFailed = false;
 
   if (ppdMode === 'day') {
     const date = document.getElementById('ppd-date').value;
     if (!date) return;
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
       const res = await fetch(
         `${cfg.url}/rest/v1/attendance?date=eq.${date}&school_code=in.(${codes.join(',')})&order=school_name`,
-        { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key } }
+        { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key }, signal: controller.signal }
       );
+      clearTimeout(timeout);
       if (res.ok) records = await res.json();
-      else showToast('⚠ Supabase error: ' + res.status);
-    } catch(e) { showToast('⚠ Fetch error: ' + e.message); }
+      else { fetchFailed = true; console.warn('Supabase day fetch HTTP', res.status); }
+    } catch(e) { fetchFailed = true; console.warn('Supabase day fetch error:', e.message); }
+
+    if (fetchFailed) {
+      const date2 = document.getElementById('ppd-date').value;
+      records = getLocalRecordsForCodes(codes, date2);
+      showToast('⚠ Supabase unreachable — showing local cache');
+    }
 
   } else {
     const month = document.getElementById('ppd-month').value;
     if (!month) return;
     const [yr, mo] = month.split('-');
     const startDate = `${yr}-${mo}-01`;
-    const endDate   = `${yr}-${mo}-${new Date(yr, mo, 0).getDate()}`;
+    const endDate   = `${yr}-${mo}-${new Date(yr, parseInt(mo), 0).getDate()}`;
+    let raw = [];
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
       const res = await fetch(
         `${cfg.url}/rest/v1/attendance?date=gte.${startDate}&date=lte.${endDate}&school_code=in.(${codes.join(',')})&order=school_code`,
-        { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key } }
+        { headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key }, signal: controller.signal }
       );
-      if (res.ok) {
-        const raw = await res.json();
-        const map = {};
-        raw.forEach(r => {
-          if (!map[r.school_code]) {
-            map[r.school_code] = {
-              school_code:  r.school_code,
-              school_name:  r.school_name,
-              school_type:  r.school_type,
-              total_enrolled: r.total_enrolled,
-              total_present:  0,
-              total_absent:   0,
-              days:           0,
-              rate_sum:       0,
-              submitted_at:   r.submitted_at,
-              submitted_by:   r.submitted_by,
-              classrooms:     r.classrooms
-            };
-          }
-          const m = map[r.school_code];
-          m.total_enrolled  = r.total_enrolled;
-          m.total_present  += r.total_present;
-          m.total_absent   += r.total_absent;
-          m.days           += 1;
-          m.rate_sum       += parseFloat(r.attendance_rate);
-          if (r.submitted_at > m.submitted_at) {
-            m.submitted_at = r.submitted_at;
-            m.submitted_by = r.submitted_by;
-            m.classrooms   = r.classrooms;
-          }
-        });
-        records = Object.values(map).map(s => ({
-          ...s,
-          attendance_rate: s.days > 0
-            ? parseFloat((s.rate_sum / s.days).toFixed(2))
-            : 0
-        }));
-      } else showToast('⚠ Supabase error: ' + res.status);
-    } catch(e) { showToast('⚠ Fetch error: ' + e.message); }
+      clearTimeout(timeout);
+      if (res.ok) raw = await res.json();
+      else { fetchFailed = true; console.warn('Supabase month fetch HTTP', res.status); }
+    } catch(e) { fetchFailed = true; console.warn('Supabase month fetch error:', e.message); }
+
+    if (fetchFailed) {
+      raw = getLocalRecordsForCodesAndMonth(codes, yr, mo);
+      showToast('⚠ Supabase unreachable — showing local cache');
+    }
+
+    records = _aggregateBySchool(raw);
   }
 
   window._ppdRecords = records;
   renderPPDCards(records, schools);
+}
+
+// Aggregate raw attendance rows into per-school monthly summaries
+function _aggregateBySchool(raw) {
+  const map = {};
+  raw.forEach(r => {
+    if (!map[r.school_code]) map[r.school_code] = {
+      school_code: r.school_code, school_name: r.school_name,
+      school_type: r.school_type, total_enrolled: r.total_enrolled,
+      total_present: 0, total_absent: 0, days: 0, rate_sum: 0,
+      submitted_at: r.submitted_at, submitted_by: r.submitted_by, classrooms: r.classrooms
+    };
+    const m = map[r.school_code];
+    m.total_enrolled = r.total_enrolled;
+    m.total_present += r.total_present;
+    m.total_absent  += r.total_absent;
+    m.days          += 1;
+    m.rate_sum      += parseFloat(r.attendance_rate);
+    if (r.submitted_at > m.submitted_at) {
+      m.submitted_at = r.submitted_at; m.submitted_by = r.submitted_by; m.classrooms = r.classrooms;
+    }
+  });
+  return Object.values(map).map(s => ({
+    ...s, attendance_rate: s.days > 0 ? parseFloat((s.rate_sum / s.days).toFixed(2)) : 0
+  }));
+}
+
+// Build day/month records from localStorage for a given set of codes
+function _buildPPDRecordsFromLocal(codes) {
+  if (ppdMode === 'day') {
+    const date = document.getElementById('ppd-date').value;
+    return getLocalRecordsForCodes(codes, date);
+  } else {
+    const month = document.getElementById('ppd-month').value || '';
+    const [yr, mo] = month.split('-');
+    const raw = getLocalRecordsForCodesAndMonth(codes, yr, mo);
+    return _aggregateBySchool(raw);
+  }
 }
 
 function kpiLevel(rate) {
@@ -3028,32 +3049,17 @@ async function deleteUser(username){
 
 function loadAdminSchools(){
   const schools=getSchools();
-  const ppds=getPPD();
-  const jpns=getJPN();
-  document.getElementById('adm-slist').innerHTML=schools.map(s=>{
-    const ppd=ppds.find(p=>p.code===s.ppd_code);
-    const jpn=jpns.find(j=>j.code===s.jpn_code);
-    const typeColor={'SK':'#1A5F9C','SMK':'#0E9D8A','SJKC':'#E63946','SJKT':'#F0A500','SABK':'#7c3aed','SMKA':'#0891b2'}[s.type]||'#6B7E92';
-    return `
+  document.getElementById('adm-slist').innerHTML=schools.map(s=>`
     <div class="u-row">
       <div class="u-av" style="background:var(--lite);font-size:18px">🏫</div>
-      <div class="u-info" style="min-width:0">
-        <div class="u-name" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          ${esc(s.name)}
-          ${s.type?`<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;background:${typeColor}22;color:${typeColor};border:1px solid ${typeColor}44">${esc(s.type)}</span>`:''}
-        </div>
-        <div class="u-meta" style="font-family:var(--mono)">${esc(s.code)}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap">
-          ${ppd?`<span>📍 ${esc(ppd.name)}</span>`:'<span style="color:#f0a500">⚠ No PPD</span>'}
-          ${jpn?`<span>🗺 ${esc(jpn.name)}</span>`:''}
-        </div>
+      <div class="u-info">
+        <div class="u-name">${esc(s.name)}</div>
+        <div class="u-meta" style="font-family:var(--mono)">${s.code}</div>
       </div>
       <div class="u-acts">
-        <button class="btn btn-s btn-sm" onclick="openEditSchool('${esc(s.code)}')">✏️</button>
-        <button class="btn btn-d btn-sm" onclick="deleteSchool('${esc(s.code)}')">🗑</button>
+        <button class="btn btn-d btn-sm" onclick="deleteSchool('${s.code}')">🗑</button>
       </div>
-    </div>`;
-  }).join('')||'<div class="empty" style="padding:24px"><h3>No schools</h3></div>';
+    </div>`).join('')||'<div class="empty" style="padding:24px"><h3>No schools</h3></div>';
 }
 
 async function addSchool(){
@@ -3069,157 +3075,16 @@ async function addSchool(){
   const schools=getSchools();
   if(schools.find(s=>s.code===code)){errEl.textContent='⚠ School code already exists.';errEl.style.display='flex';return}
   const type = document.getElementById('sc-type').value;
-  const newSchool = {code, name, type, jpn_code, ppd_code};
-  schools.push(newSchool);
+  schools.push({code, name, type, jpn_code, ppd_code});
   saveSchools(schools);
-  await upsertSchoolToSupabase(newSchool);
+  await saveSchoolsToSupabase(schools);
   document.getElementById('sc-code').value='';
   document.getElementById('sc-name').value='';
   document.getElementById('sc-jpn').value='';
-  document.getElementById('sc-jpn-search').value='';
-  document.getElementById('sc-ppd').value='';
-  document.getElementById('sc-ppd-search').value='';
-  document.getElementById('sc-ppd-search').disabled=true;
-  document.getElementById('sc-ppd-search').placeholder='Select JPN first…';
+  document.getElementById('sc-ppd').innerHTML='<option value="">— Select PPD —</option>';
   loadAdminSchools();
   populateSchoolSelects();
   showToast(`✓ School "${name}" added`);
-}
-
-// Upsert a single school record to Supabase
-async function upsertSchoolToSupabase(school){
-  const cfg=getSupaConfig();
-  if(!cfg.url||!cfg.key) return{ok:false};
-  try{
-    const res=await fetch(`${cfg.url}/rest/v1/sars_schools`,{
-      method:'POST',
-      headers:{
-        'apikey':cfg.key,'Authorization':'Bearer '+cfg.key,
-        'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'
-      },
-      body:JSON.stringify(school)
-    });
-    return{ok:res.ok};
-  }catch(e){return{ok:false,error:e.message}}
-}
-
-// Open edit school modal
-function openEditSchool(code){
-  const schools=getSchools();
-  const s=schools.find(x=>x.code===code);
-  if(!s)return;
-
-  document.getElementById('es-orig').value=code;
-  document.getElementById('es-code').value=s.code;
-  document.getElementById('es-name').value=s.name;
-  document.getElementById('es-type').value=s.type||'SK';
-
-  // JPN searchable
-  const jpns=getJPN();
-  const jpn=jpns.find(j=>j.code===s.jpn_code);
-  document.getElementById('es-jpn').value=s.jpn_code||'';
-  document.getElementById('es-jpn-search').value=jpn?jpn.name:(s.jpn_code||'');
-
-  // PPD searchable — populate filtered list
-  const ppd=getPPD().find(p=>p.code===s.ppd_code);
-  document.getElementById('es-ppd').value=s.ppd_code||'';
-  document.getElementById('es-ppd-search').value=ppd?ppd.name:(s.ppd_code||'');
-  document.getElementById('es-ppd-search').disabled=!s.jpn_code;
-
-  document.getElementById('es-err').style.display='none';
-  document.getElementById('modal-edit-school').classList.add('open');
-}
-
-async function saveEditSchool(){
-  const origCode=document.getElementById('es-orig').value;
-  const code=document.getElementById('es-code').value.trim().toUpperCase();
-  const name=document.getElementById('es-name').value.trim();
-  const type=document.getElementById('es-type').value;
-  const jpn_code=document.getElementById('es-jpn').value;
-  const ppd_code=document.getElementById('es-ppd').value;
-  const errEl=document.getElementById('es-err');
-  errEl.style.display='none';
-
-  if(!code){errEl.textContent='⚠ School code is required.';errEl.style.display='flex';return}
-  if(!name){errEl.textContent='⚠ School name is required.';errEl.style.display='flex';return}
-  if(!jpn_code){errEl.textContent='⚠ Please select a JPN.';errEl.style.display='flex';return}
-  if(!ppd_code){errEl.textContent='⚠ Please select a PPD.';errEl.style.display='flex';return}
-
-  let schools=getSchools();
-  if(code!==origCode && schools.find(s=>s.code===code)){
-    errEl.textContent=`⚠ School code "${code}" already exists.`;errEl.style.display='flex';return;
-  }
-
-  const updatedSchool={code,name,type,jpn_code,ppd_code};
-  const cfg=getSupaConfig();
-
-  if(cfg.url&&cfg.key){
-    // If code changed, delete old + insert new; otherwise PATCH
-    if(code!==origCode){
-      await fetch(`${cfg.url}/rest/v1/sars_schools?code=eq.${origCode}`,{
-        method:'DELETE',headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key}
-      });
-      await upsertSchoolToSupabase(updatedSchool);
-    } else {
-      const res=await fetch(`${cfg.url}/rest/v1/sars_schools?code=eq.${origCode}`,{
-        method:'PATCH',
-        headers:{'apikey':cfg.key,'Authorization':'Bearer '+cfg.key,'Content-Type':'application/json','Prefer':'return=minimal'},
-        body:JSON.stringify(updatedSchool)
-      });
-      if(!res.ok){
-        errEl.textContent=`⚠ Supabase update failed (${res.status}).`;errEl.style.display='flex';return;
-      }
-    }
-  }
-
-  schools=schools.map(s=>s.code===origCode?updatedSchool:s);
-  saveSchools(schools);
-  closeModal('modal-edit-school');
-  loadAdminSchools();
-  populateSchoolSelects();
-  showToast(`✓ School "${name}" updated`);
-}
-
-// Edit School modal JPN/PPD dropdown helpers
-function showESJPNOptions(){ filterESJPNOptions(); }
-function filterESJPNOptions(){
-  const filter=document.getElementById('es-jpn-search').value.toLowerCase();
-  const opts=document.getElementById('es-jpn-opts');
-  opts.style.display='block';
-  opts.innerHTML=getJPN()
-    .filter(j=>j.name.toLowerCase().includes(filter)||j.code.toLowerCase().includes(filter))
-    .map(j=>`<div style="padding:10px 14px;cursor:pointer;font-size:13px"
-        onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''"
-        onmousedown="selectESJPN('${j.code}','${esc(j.name)}')">${esc(j.name)} <span style="color:#999;font-size:11px">${j.code}</span></div>`).join('')
-    ||'<div style="padding:10px 14px;color:#999;font-size:13px">No results</div>';
-}
-function selectESJPN(code,name){
-  document.getElementById('es-jpn').value=code;
-  document.getElementById('es-jpn-search').value=name;
-  document.getElementById('es-jpn-opts').style.display='none';
-  // Reset PPD
-  document.getElementById('es-ppd').value='';
-  document.getElementById('es-ppd-search').value='';
-  document.getElementById('es-ppd-search').disabled=false;
-  document.getElementById('es-ppd-search').placeholder='Search PPD…';
-}
-function showESPPDOptions(){ filterESPPDOptions(); }
-function filterESPPDOptions(){
-  const jpnCode=document.getElementById('es-jpn').value;
-  if(!jpnCode)return;
-  const filter=document.getElementById('es-ppd-search').value.toLowerCase();
-  const opts=document.getElementById('es-ppd-opts');
-  opts.style.display='block';
-  opts.innerHTML=getPPD().filter(p=>p.jpn_code===jpnCode&&(p.name.toLowerCase().includes(filter)||p.code.toLowerCase().includes(filter)))
-    .map(p=>`<div style="padding:10px 14px;cursor:pointer;font-size:13px"
-        onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''"
-        onmousedown="selectESPPD('${p.code}','${esc(p.name)}')">${esc(p.name)}</div>`).join('')
-    ||'<div style="padding:10px 14px;color:#999;font-size:13px">No PPD found for this JPN</div>';
-}
-function selectESPPD(code,name){
-  document.getElementById('es-ppd').value=code;
-  document.getElementById('es-ppd-search').value=name;
-  document.getElementById('es-ppd-opts').style.display='none';
 }
 
 async function deleteSchool(code){
