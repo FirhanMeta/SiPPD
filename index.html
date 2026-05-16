@@ -3562,7 +3562,7 @@ async function pushToSupabase(record){
     };
     // UPSERT only — PATCH was silently succeeding (HTTP 200) even when 0 rows matched,
     // so new schools were never inserted. Single upsert call fixes both insert and update.
-    const upsertRes=await fetch(`${cfg.url}/rest/v1/${cfg.table}`,{
+    const upsertRes=await fetch(`${cfg.url}/rest/v1/${cfg.table}?on_conflict=school_code,date`,{
       method:'POST',
       headers:{
         'apikey':cfg.key,
