@@ -767,6 +767,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <button class="btn btn-d" onclick="clearCache()">🗑 Clear Local Cache</button>
       </div>
     </div>
+
   </div>
 </div>
 
@@ -2505,6 +2506,7 @@ async function doLogin() {
   CU = user;
   localStorage.setItem('sars_session', JSON.stringify(CU));
   showLanding();
+  resyncUnsynced().catch(() => {}); // push any stuck local records
 }
 function logout(){
   CU=null;
@@ -2795,6 +2797,7 @@ async function saveAttendance(){
   updateDateIndicator(date);
   showSubmittedSummary(record);
   showToast('✓ Attendance saved!');
+  resyncUnsynced().catch(() => {}); // push any other unsynced records
 }
 
 function updateDateIndicator(date){
@@ -3557,31 +3560,37 @@ async function pushToSupabase(record){
       attendance_rate:record.attendance_rate,
       classrooms:record.classrooms,
     };
-    const patchRes=await fetch(`${cfg.url}/rest/v1/${cfg.table}?school_code=eq.${record.school_code}&date=eq.${record.date}`,{
-      method:'PATCH',
-      headers:{
-        'apikey':cfg.key,
-        'Authorization':'Bearer '+cfg.key,
-        'Content-Type':'application/json',
-        'Prefer':'return=minimal',
-      },
-      body:JSON.stringify(payload),
-    });
-    if(patchRes.ok) return{ok:true};
-    const postRes=await fetch(`${cfg.url}/rest/v1/${cfg.table}`,{
+    // UPSERT only — PATCH was silently succeeding (HTTP 200) even when 0 rows matched,
+    // so new schools were never inserted. Single upsert call fixes both insert and update.
+    const upsertRes=await fetch(`${cfg.url}/rest/v1/${cfg.table}`,{
       method:'POST',
       headers:{
         'apikey':cfg.key,
         'Authorization':'Bearer '+cfg.key,
         'Content-Type':'application/json',
-        'Prefer':'resolution=merge-duplicates',
+        'Prefer':'resolution=merge-duplicates,return=minimal',
       },
       body:JSON.stringify(payload),
     });
-    if(postRes.status===200||postRes.status===201||postRes.status===204) return{ok:true};
-    const body=await postRes.text();
-    return{ok:false,error:`HTTP ${postRes.status}: ${body.slice(0,80)}`};
+    if(upsertRes.status===200||upsertRes.status===201||upsertRes.status===204){
+      // Mark synced in localStorage
+      const key=`sars_rec_${record.school_code}_${record.date}`;
+      const stored=S.get(key,null);
+      if(stored){stored.supabase_synced=true;S.set(key,stored);}
+      return{ok:true};
+    }
+    const body=await upsertRes.text();
+    return{ok:false,error:`HTTP ${upsertRes.status}: ${body.slice(0,120)}`};
   }catch(e){return{ok:false,error:e.message}}
+}
+
+// Silently push all locally-saved records that never made it to Supabase
+async function resyncUnsynced(){
+  const all=getAllRecords().filter(r=>!r.supabase_synced);
+  if(!all.length) return;
+  for(const rec of all){
+    await pushToSupabase(rec);
+  }
 }
 
 // ══════════════════════════════════════════════════
@@ -3766,6 +3775,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const fresh = getUsers().find(u => u.username === CU.username);
       if (fresh) { CU = fresh; localStorage.setItem('sars_session', JSON.stringify(CU)); }
       showLanding();
+      resyncUnsynced().catch(() => {}); // silently push stuck local records
     } catch {
       localStorage.removeItem('sars_session');
       showScreen('screen-login');
