@@ -436,7 +436,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       </div>
     </div>
     <div id="setup-err" class="alert al-err" style="display:none"></div>
-    <button class="btn btn-p btn-full ai" onclick="saveSetup()" style="margin-bottom:80px">💾 Save as Default Setup</button>
+    <button class="btn btn-p btn-full ai" onclick="generateOverviewReport()" style="margin-bottom:12px">
+      📊 Generate Report
+    </button>
   </div>
   <!-- END SETUP TAB -->
 
@@ -918,6 +920,24 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 </div>
 
 <!-- PPD SCHOOL DETAIL MODAL -->
+<!-- OVERVIEW REPORT MODAL -->
+<div class="modal-ov" id="modal-overview-report">
+  <div class="modal" style="max-width:700px;max-height:90vh;display:flex;flex-direction:column">
+    <div class="modal-hd">
+      <div>
+        <h3>📊 Overview Report</h3>
+        <div id="ov-modal-meta" style="font-size:11px;color:var(--muted);margin-top:2px;font-family:var(--mono)"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-p btn-sm" onclick="printOvModal()">🖨 Cetak</button>
+        <button class="modal-x" onclick="closeModal('modal-overview-report')">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="ov-modal-body" style="overflow-y:auto;flex:1;padding:20px"></div>
+  </div>
+</div>
 <div class="modal-ov" id="modal-ppd-school">
   <div class="modal" style="max-width:460px">
     <div class="modal-hd">
@@ -2284,7 +2304,122 @@ function printPPDReport() {
 
   setTimeout(() => window.print(), 150);
 }
+// ══════════════════════════════════════════════════
+// OVERVIEW REPORT  
+// ══════════════════════════════════════════════════
+function generateOverviewReport() {
+  const d = window._ovData;
+  if (!d) { showToast('⚠ No data loaded yet'); return; }
 
+  const navy='#0D2137', blue='#1A5F9C', green='#1DB87A', red='#E63946', gold='#d4af37';
+  const rateColor = r => r >= 95 ? gold : r >= 90 ? blue : r >= 85 ? '#718096' : red;
+  const kpiBadge = r => {
+    if(r>=95) return `<span style="background:rgba(212,175,55,.2);color:#8a6d00;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">🏆 Platinum</span>`;
+    if(r>=90) return `<span style="background:rgba(26,95,156,.15);color:${blue};padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">🥇 Gold</span>`;
+    if(r>=85) return `<span style="background:rgba(107,126,146,.15);color:#4a5568;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">🥈 Silver</span>`;
+    return `<span style="background:rgba(230,57,70,.12);color:${red};padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">🚨 Intervensi</span>`;
+  };
+  const genTime = new Date().toLocaleString('en-MY');
+
+  document.getElementById('ov-modal-meta').textContent = `${d.ppd} · ${d.monthLabel} · ${d.schools.length} sekolah · Dijana: ${genTime}`;
+
+  document.getElementById('ov-modal-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
+      <div style="border:1.5px solid #dde;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:700;color:${navy}">${d.avgRate ? d.avgRate+'%' : '—'}</div>
+        <div style="font-size:10px;color:#888;margin-top:2px">Kadar Avg Bulanan</div>
+      </div>
+      <div style="border:1.5px solid #dde;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:700;color:${green}">${d.totP || '—'}</div>
+        <div style="font-size:10px;color:#888;margin-top:2px">Avg Hadir/Hari</div>
+      </div>
+      <div style="border:1.5px solid #dde;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:700;color:${navy}">${d.totE || '—'}</div>
+        <div style="font-size:10px;color:#888;margin-top:2px">Total Enrolmen</div>
+      </div>
+      <div style="border:1.5px solid #dde;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:700;color:${red}">${d.intervention}</div>
+        <div style="font-size:10px;color:#888;margin-top:2px">Sekolah Intervensi</div>
+      </div>
+    </div>
+
+    <div style="font-size:13px;font-weight:700;color:${navy};border-left:4px solid ${blue};padding-left:8px;margin-bottom:12px">
+      Prestasi Sekolah — ${d.monthLabel}
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr>
+          <th style="background:${navy};color:#fff;padding:8px 10px;text-align:left">#</th>
+          <th style="background:${navy};color:#fff;padding:8px 10px;text-align:left">Sekolah</th>
+          <th style="background:${navy};color:#fff;padding:8px 10px;text-align:center">Avg Hadir/Hari</th>
+          <th style="background:${navy};color:#fff;padding:8px 10px;text-align:center">Enrol</th>
+          <th style="background:${navy};color:#fff;padding:8px 10px;text-align:center">Avg Rate</th>
+          <th style="background:${navy};color:#fff;padding:8px 10px;text-align:center">Hari</th>
+          <th style="background:${navy};color:#fff;padding:8px 10px;text-align:center">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${d.schoolRecords.map((r,i) => `
+        <tr style="background:${i%2===0?'#f8fafc':'#fff'}">
+          <td style="padding:8px 10px;font-weight:700;color:${navy}">${i+1}</td>
+          <td style="padding:8px 10px">
+            <div style="font-weight:600">${esc(r.school_name)}</div>
+            <div style="font-size:10px;color:#888;font-family:monospace">${r.school_code}</div>
+          </td>
+          <td style="padding:8px 10px;text-align:center;color:${green};font-weight:700">~${r.avg_daily_present || Math.round(r.total_present/(r.days||1))}</td>
+          <td style="padding:8px 10px;text-align:center">${r.total_enrolled}</td>
+          <td style="padding:8px 10px;text-align:center;font-weight:700;color:${rateColor(r.attendance_rate)}">${r.attendance_rate.toFixed(1)}%</td>
+          <td style="padding:8px 10px;text-align:center;color:#666">${r.days}</td>
+          <td style="padding:8px 10px;text-align:center">${kpiBadge(r.attendance_rate)}</td>
+        </tr>`).join('')}
+        ${d.missingSchools.map(s => `
+        <tr style="background:#fafafa;opacity:.6">
+          <td style="padding:8px 10px;color:#aaa">—</td>
+          <td style="padding:8px 10px">
+            <div style="font-weight:600;color:#aaa">${esc(s.name)}</div>
+            <div style="font-size:10px;color:#bbb;font-family:monospace">${s.code}</div>
+          </td>
+          <td colspan="5" style="padding:8px 10px;text-align:center;color:#aaa;font-style:italic">Tiada Rekod</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    <div style="text-align:center;font-size:11px;color:#aaa;border-top:1px solid #eee;padding-top:10px;margin-top:16px">
+      SiPPD Cloud System · Dijana ${genTime}
+    </div>
+  `;
+
+  document.getElementById('modal-overview-report').classList.add('open');
+}
+
+function printOvModal() {
+  const d = window._ovData;
+  if (!d) return;
+
+  let styleEl = document.getElementById('ppd-ov-print-style');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'ppd-ov-print-style';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = `
+    @page { size: A4 portrait; margin: 15mm; }
+    @media print {
+      body > *:not(#ppd-ov-print) { display:none!important; }
+      #ppd-ov-print { display:block!important; }
+    }
+    #ppd-ov-print { display:none; font-family:'DM Sans',sans-serif; font-size:13px; color:#1A2A3A; }
+  `;
+
+  let printDiv = document.getElementById('ppd-ov-print');
+  if (!printDiv) {
+    printDiv = document.createElement('div');
+    printDiv.id = 'ppd-ov-print';
+    document.body.appendChild(printDiv);
+  }
+  printDiv.innerHTML = document.getElementById('ov-modal-body').innerHTML;
+  printDiv.style.display = 'block';
+  setTimeout(() => window.print(), 150);
+}
 // ══════════════════════════════════════════════════
 // CALENDAR HELPERS
 // ══════════════════════════════════════════════════
