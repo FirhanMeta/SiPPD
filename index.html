@@ -2392,33 +2392,29 @@ function generateOverviewReport() {
 }
 
 function printOvModal() {
-  const d = window._ovData;
-  if (!d) return;
-
-  let styleEl = document.getElementById('ppd-ov-print-style');
-  if (!styleEl) {
-    styleEl = document.createElement('style');
-    styleEl.id = 'ppd-ov-print-style';
-    document.head.appendChild(styleEl);
-  }
-  styleEl.textContent = `
-  @page { size: A4 portrait; margin: 15mm; }
-  @media print {
-    .screen, .modal-ov, #toast { display:none!important; }
-    #ppd-ov-print { display:block!important; position:fixed; top:0; left:0; width:100%; z-index:99999; background:#fff; }
-  }
-  #ppd-ov-print { display:none; font-family:'DM Sans',sans-serif; font-size:13px; color:#1A2A3A; }
-`;
-
-  let printDiv = document.getElementById('ppd-ov-print');
-  if (!printDiv) {
-    printDiv = document.createElement('div');
-    printDiv.id = 'ppd-ov-print';
-    document.body.appendChild(printDiv);
-  }
-  printDiv.innerHTML = document.getElementById('ov-modal-body').innerHTML;
-  printDiv.style.display = 'block';
-  setTimeout(() => window.print(), 150);
+  const content = document.getElementById('ov-modal-body').innerHTML;
+  
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Overview Report</title>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+      <style>
+        @page { size: A4 portrait; margin: 15mm; }
+        body { font-family:'DM Sans',sans-serif; font-size:13px; color:#1A2A3A; padding:20px; }
+      </style>
+    </head>
+    <body>
+      ${content}
+      <script>
+        window.onload = function(){ window.print(); window.close(); }
+      <\/script>
+    </body>
+    </html>
+  `);
+  win.document.close();
 }
 // ══════════════════════════════════════════════════
 // CALENDAR HELPERS
