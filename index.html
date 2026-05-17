@@ -1552,14 +1552,7 @@ function printPPDOverview() {
   const genTime = new Date().toLocaleString('en-MY');
 
   const html = `
-  <style>
-    @page { size: A4 portrait; margin: 15mm; }
-    @media print {
-      body > *:not(#ppd-ov-print) { display:none!important; }
-      #ppd-ov-print { display:block!important; }
-    }
-    #ppd-ov-print { display:none; font-family:'DM Sans',sans-serif; font-size:13px; color:#1A2A3A; }
-  </style>
+
   <div style="border-bottom:3px solid ${navy};padding-bottom:10px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-end">
     <div>
       <div style="font-size:20px;font-weight:700;color:${navy};font-family:'Playfair Display',serif">SiPPD Cloud System</div>
@@ -1635,6 +1628,20 @@ function printPPDOverview() {
     SiPPD Cloud System · Dijana ${genTime}
   </div>`;
 
+  let styleEl = document.getElementById('ppd-ov-print-style');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'ppd-ov-print-style';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = `
+    @page { size: A4 portrait; margin: 15mm; }
+    @media print {
+      body > *:not(#ppd-ov-print) { display:none!important; }
+      #ppd-ov-print { display:block!important; }
+    }
+    #ppd-ov-print { display:none; font-family:'DM Sans',sans-serif; font-size:13px; color:#1A2A3A; }
+  `;
   let printDiv = document.getElementById('ppd-ov-print');
   if (!printDiv) { printDiv = document.createElement('div'); printDiv.id = 'ppd-ov-print'; document.body.appendChild(printDiv); }
   printDiv.innerHTML = html;
