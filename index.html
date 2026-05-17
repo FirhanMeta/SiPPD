@@ -1645,6 +1645,7 @@ function printPPDOverview() {
   let printDiv = document.getElementById('ppd-ov-print');
   if (!printDiv) { printDiv = document.createElement('div'); printDiv.id = 'ppd-ov-print'; document.body.appendChild(printDiv); }
   printDiv.innerHTML = html;
+  printDiv.style.display = 'block';
   setTimeout(() => window.print(), 150);
 }
 
